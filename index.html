@@ -208,10 +208,16 @@
 
   /* assenze */
   select { font:inherit; color:inherit; }
+  .tn { color:var(--muted); } .tn.full { color:var(--ok); } .tn.over, .tn.short { color:var(--warn); }
+  /* 1. controlli del giorno solo al passaggio del mouse; sempre visibili oggi, nei giorni vuoti e sugli schermi touch */
+  .day .dmeta .abs-pick, .day .dmeta [data-add] { opacity:0; transition:opacity .12s; }
+  .day:hover .dmeta .abs-pick, .day:hover .dmeta [data-add], .day:focus-within .dmeta .abs-pick, .day:focus-within .dmeta [data-add],
+  .day.today .dmeta .abs-pick, .day.today .dmeta [data-add], .day.missing .dmeta .abs-pick, .day.missing .dmeta [data-add] { opacity:1; }
+  @media (hover: none) { .day .dmeta .abs-pick, .day .dmeta [data-add] { opacity:1; } }
   .abs-pick { padding:3px 6px; border:1px dashed var(--line); border-radius:8px; background:transparent; color:var(--muted); font-size:13px; max-width:140px; }
   .abs-pick:hover, .abs-pick:focus { border-style:solid; border-color:var(--accent); color:var(--accent); outline:none; }
-  .row select[data-f=absence] { width:100%; min-width:0; padding:5px 4px; border:1px solid transparent; border-radius:6px; background:var(--warn-soft); color:var(--warn); font-weight:600; }
-  .row select[data-f=absence]:hover, .row select[data-f=absence]:focus { border-color:var(--accent); outline:none; }
+  .row select[data-f=absence] { width:100%; min-width:0; padding:5px 8px; border:1px solid transparent; border-radius:6px; background:transparent; color:var(--muted); font-weight:500; appearance:none; -webkit-appearance:none; cursor:pointer; }
+  .row select[data-f=absence]:hover, .row select[data-f=absence]:focus { border-color:var(--line); background:var(--card); color:var(--fg); outline:none; }
 
   /* grafici */
   .charts { display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:12px; }
@@ -332,6 +338,7 @@
   #fAdo h3 { font-size:20px; margin:0 0 6px; }
   .fld { display:grid; grid-template-columns:70px 1fr; gap:8px; align-items:center; margin-bottom:8px; font-size:13px; color:var(--muted); }
   #status { cursor:pointer; } #status:hover { color:var(--accent); }
+  #status:not(.busy):not(.err) { visibility:hidden; }
   .ico { display:inline-flex; align-items:center; gap:6px; } .ico svg { width:16px; height:16px; flex:none; }
   .opt-card .ico svg { width:22px; height:22px; color:var(--accent); }
   @media (max-width: 560px) {
@@ -352,7 +359,7 @@
     :root { --cols: 6px minmax(100px,1fr) 84px 46px 0 60px; }
     .row .det, .grip { visibility:hidden; overflow:hidden; } .colhead span:nth-child(5) { visibility:hidden; }
     .acts .icon { width:28px; }
-    .dhead { gap:6px; } .dhead .bar { display:none; } .abs-pick { max-width:110px; }
+    .dhead { gap:6px; } .abs-pick { max-width:110px; }
     .quick { grid-template-columns:1fr 1fr; } .search { flex:1; } .search input { width:100%; } #status { display:none; }
   }
   #fab, #qClose, .sheet-bg { display:none; }
@@ -912,9 +919,11 @@ function renderChrome() {
   uMap = data.entries.length ? unlogged() : new Map();
   $('hero').innerHTML = heroHtml(); adoBtn();
 }
-function totHtml(tot) {
+// totale del giorno: verde se completo, arancione se oltre o se a un giorno passato mancano ore
+function totHtml(tot, k) {
   if (!tot) return '';
-  return `<span class="bar ${tot > H ? 'over' : tot === H ? 'full' : ''}"><i style="width:${Math.min(100, tot / H * 100)}%"></i></span>${fmt(tot)} h`;
+  const cls = tot > H ? 'over' : tot === H ? 'full' : k && k < today() ? 'short' : '';
+  return `<span class="tn ${cls}" title="${tot === H ? 'Giornata completa' : tot > H ? `${fmt(tot - H)} h oltre la giornata` : `Mancano ${fmt(H - tot)} h`}">${fmt(tot)} h</span>`;
 }
 function sprintStats(s) {
   const days = [];
@@ -968,7 +977,7 @@ function dayCard(i) {
   let h = `<section class="${cls}" id="d-${i.k}" data-day="${i.k}"><div class="dhead">
     <div class="date"><span class="dnum">${i.d.getDate()}</span><span class="dname">${DOW[i.d.getDay()]}</span></div>
     ${i.hol ?`<span class="chip">${esc(i.hol)}</span>` : ''}${i.missing ? '<span class="chip warn">Da compilare</span>' : ''}
-    <div class="dmeta"><span class="tot" data-tot="${i.k}">${totHtml(i.tot)}</span>
+    <div class="dmeta"><span class="tot" data-tot="${i.k}">${totHtml(i.tot, i.k)}</span>
     ${i.we || i.hol ? '' : `<select class="abs-pick" data-abs="${i.k}" title="Aggiungi un'assenza a questo giorno"><option value="">＋ Assenza</option>${codeOpts()}</select>`}
     <button class="icon" data-add="${i.k}" title="Aggiungi attività a questo giorno">＋</button></div></div>`;
   if (i.es.length) h += i.es.map(row).join('');
@@ -1327,7 +1336,7 @@ function commit(t, extra) {
   r.querySelector('[data-f=commessa]').value = e.commessa ?? '';
   r.querySelector('[data-f=hours]').value = fmt(e.hours);
   r.classList.toggle('absence', !!e.absence || e.hours == null);
-  document.querySelector(`[data-tot="${e.date}"]`).innerHTML = totHtml(byDate.get(e.date).reduce((s, x) => s + (+x.hours || 0), 0));
+  document.querySelector(`[data-tot="${e.date}"]`).innerHTML = totHtml(byDate.get(e.date).reduce((s, x) => s + (+x.hours || 0), 0), e.date);
   renderChrome();
 }
 $('content').addEventListener('focusin', ev => { if (ev.target.matches('[data-f=hours],[data-f=task]')) ev.target.select(); });
