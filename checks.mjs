@@ -12,11 +12,12 @@ const stub = () => new Proxy(function () {}, {
   get: (t, k) => k === 'classList' ? {toggle() {}, add() {}, remove() {}} : k === 'querySelectorAll' ? () => [] : stub(),
   set: () => true, apply: () => stub(),
 });
-Object.assign(globalThis, {document: stub(), window: stub(), indexedDB: {open: stub}, localStorage: {getItem: () => null, setItem() {}}});
+Object.assign(globalThis, {document: stub(), window: stub(), indexedDB: {open: stub}, localStorage: {getItem: () => null, setItem() {}},
+  setInterval: () => 0}); // i timer della pagina terrebbero vivo il processo all'infinito
 
 let T;
 (function () {
-  eval(src + `;T = {imports, unlogged, merge, migrated, adoSprints, reindex,
+  eval(src + `;T = {imports, unlogged, merge, migrated, adoSprints, iterHours, reindex,
     use: d => { data = migrated(d); reindex(); return data; }, setFetch: f => { adoFetch = f; }};`);
 })();
 
@@ -86,17 +87,36 @@ const tree = {name: 'P', children: [
   {name: 'Altro', children: [{name: 'X-S1', attributes: {startDate: '2026-10-12T00:00:00Z', finishDate: '2026-10-23T00:00:00Z'}}]},
 ]};
 T.setFetch(async () => tree);
-await check('sprint DevOps: nome dello sprint con più ore, release senza task ignorate', async () => {
+await check('finestre sprint da DevOps: nome per date, una per periodo, release senza task ignorate', async () => {
   const d = T.use(file([E('2026-10-13', '1', 6), E('2026-10-14', '2', 2)]));
   d.ado.items['1'] = item(6, 'P\\M2C R2\\M2C-S7'); d.ado.items['2'] = item(2, 'P\\MDM R4\\MDM-S2');
   await T.adoSprints();
-  assert.deepEqual(d.sprints.map(s => [s.name, s.start]), [['M2C-S7', '2026-10-12'], ['M2C-S8', '2026-10-26']]);
+  assert.deepEqual(d.sprints.map(s => [s.name, s.start]), [['Sprint 12–23 ott', '2026-10-12'], ['Sprint 26 ott–6 nov', '2026-10-26']]);
 });
-await check('sprint DevOps: quelli a mano vincono, quelli eliminati non tornano', async () => {
-  const d = T.use(file([E('2026-10-13', '1', 6)], {sprints: [{name: 'Mio', start: '2026-10-12', end: '2026-10-23'}], sprintSkip: ['2026-10-26']}));
+await check('finestre sprint: quelle nascoste non tornano', async () => {
+  const d = T.use(file([E('2026-10-13', '1', 6)], {sprintSkip: ['2026-10-26']}));
   d.ado.items['1'] = item(6, 'P\\M2C R2\\M2C-S7');
   await T.adoSprints();
-  assert.deepEqual(d.sprints.map(s => s.name), ['Mio']);
+  assert.deepEqual(d.sprints.map(s => s.start), ['2026-10-12']);
+});
+await check('formato vecchio: sprint a mano eliminati una volta sola, quelli DevOps rinominati', () => {
+  const d = T.migrated(file([], {sprintDays: 14, sprints: [{name: 'Sprint 7', start: '2026-10-12', end: '2026-10-23'},
+    {name: 'M2C-S8', start: '2026-10-26', end: '2026-11-06', ado: true}]}));
+  assert.deepEqual(d.sprints, [{name: 'Sprint 26 ott–6 nov', start: '2026-10-26', end: '2026-11-06'}]);
+  assert.equal('sprintDays' in d, false);
+  assert.equal(T.migrated(d).sprints.length, 1); // una seconda apertura non li cancella
+});
+await check('ore per iterazione: tutte quelle lavorate nel periodo, assenze escluse', () => {
+  const d = T.use(file([E('2026-10-13', '1', 6), E('2026-10-14', '2', 2), E('2026-10-14', null, 2, {activity: 'GEN AI'}),
+    E('2026-10-15', null, 2, {absence: 'ALL'})]));
+  d.ado.items['1'] = item(6, 'P\\M2C R2\\M2C-S7'); d.ado.items['2'] = item(2, 'P\\MDM R4\\MDM-S2');
+  assert.deepEqual(T.iterHours('2026-10-12', '2026-10-23'), [['M2C-S7', 6], ['MDM-S2', 2], ['senza task DevOps', 2]]);
+  assert.deepEqual(T.iterHours('2026-10-14', '2026-10-14', false), [['MDM-S2', 2]]);
+});
+await check('conflitto: la data dell\'ultima sync non si perde se una parte non ha mai sincronizzato', () => {
+  const b = T.migrated(file([])), local = T.migrated(file([])), disk = T.migrated(file([]));
+  disk.ado.syncedAt = '2026-10-25T08:00:00.000Z';
+  assert.equal(T.merge(b, local, disk).ado.syncedAt, '2026-10-25T08:00:00.000Z');
 });
 
 console.log(`\n${n} controlli superati`);
