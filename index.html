@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Riepilogo attività</title>
+<title>DevOps Timesheet</title>
 <!-- installabile come app (Chrome/Edge: icona "Installa" nella barra degli indirizzi) -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -193,6 +193,10 @@
   /* dialoghi sprint ed export */
   dialog { border:1px solid var(--line); border-radius:14px; background:var(--card); color:var(--fg); padding:20px 22px; width:min(600px, calc(100vw - 32px)); box-shadow:0 20px 50px rgba(0,0,0,.25); }
   dialog::backdrop { background:rgba(0,0,0,.35); }
+  .gate .tagline { font-size:15px; color:var(--fg); }
+  #adoPrj { display:flex; flex-wrap:wrap; gap:6px 16px; margin:4px 0 0; max-height:180px; overflow:auto; }
+  #adoPrj label { display:flex; align-items:center; gap:6px; font-size:14px; }
+  #adoMsg.err { color:var(--bad); }
   dialog h3 { margin:0 0 6px; } dialog .sub { color:var(--muted); font-size:13px; margin:0 0 10px; }
   dialog input, dialog select { padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:inherit; font:inherit; min-width:0; }
   dialog input[type=radio] { padding:0; }
@@ -247,6 +251,7 @@
   .qr { width:240px; max-width:100%; margin:0 auto; background:#fff; border-radius:8px; } /* bianco anche in tema scuro: i lettori QR vogliono contrasto */
   .qr svg { display:block; width:100%; height:auto; }
   #dlgStore .dl-foot { flex-wrap:wrap; }
+  #fAdo .fld { grid-template-columns:110px 1fr; }
   .fld { display:grid; grid-template-columns:70px 1fr; gap:8px; align-items:center; margin-bottom:8px; font-size:13px; color:var(--muted); }
   #status { cursor:pointer; } #status:hover { color:var(--accent); }
   .ico { display:inline-flex; align-items:center; gap:6px; } .ico svg { width:16px; height:16px; flex:none; }
@@ -276,7 +281,8 @@
 
 <div class="gate" id="gate">
   <div class="card">
-    <h2>Riepilogo attività</h2>
+    <h2>DevOps Timesheet</h2>
+    <p class="tagline">Il tuo diario ore che si compila da Azure DevOps: legge le ore dei tuoi task nei progetti che scegli, te le fa ricaricare sui task, e ci aggiungi a mano ferie, malattie e permessi.</p>
     <p>Le attività stanno in un file <b>attivita.json</b>: sul tuo PC o in un tuo repo GitHub privato. La pagina lo legge e lo salva lì, non lo invia altrove.</p>
     <button class="primary" id="reopen" hidden>Riapri attivita.json</button>
     <button class="btn" id="back" hidden>← Torna al riepilogo senza cambiare</button>
@@ -291,14 +297,14 @@
 
 <div id="app" hidden>
   <header class="top">
-    <span class="brand">Attività</span>
+    <span class="brand">DevOps Timesheet</span>
     <div class="nav">
       <button class="icon" id="prev" title="Mese precedente (Alt+←)">‹</button>
       <h1 id="month"></h1>
       <button class="icon" id="next" title="Mese successivo (Alt+→)">›</button>
       <button class="btn" id="today" style="margin-left:6px">Oggi</button>
     </div>
-    <div class="tabs"><button id="vDiary" class="on">Diario</button><button id="vRas">Vista RAS</button><button id="vCharts">Grafici</button></div>
+    <div class="tabs"><button id="vDiary" class="on">Diario</button><button id="vRas">Mese</button><button id="vCharts">Grafici</button></div>
     <button class="btn" id="sprints" title="Definisci gli sprint">Sprint</button>
     <button class="btn" id="export" title="Esporta per settimana, mese o sprint">Esporta</button>
     <button class="btn" id="ado">⟳ Sync Azure DevOps</button>
@@ -349,7 +355,7 @@
   <p class="sub">Serve un tuo repo <b>privato</b> (anche vuoto) e un <i>fine-grained token</i> con accesso solo a quel repo e permesso
     <b>Contents: Read and write</b> — <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">crealo qui</a>.
     Il token resta in questo browser; la pagina pubblica non contiene dati.</p>
-  <label class="fld">Repo <input name="repo" placeholder="utente/riepilogo-dati" required pattern="[\w.\-]+/[\w.\-]+"></label>
+  <label class="fld">Repo <input name="repo" placeholder="utente/timesheet-dati" required pattern="[\w.\-]+/[\w.\-]+"></label>
   <label class="fld">File <input name="path" value="attivita.json"></label>
   <label class="fld">Token <input name="token" type="password" required autocomplete="off" placeholder="github_pat_…"></label>
   <p class="sub" id="ghMsg" aria-live="polite"></p>
@@ -362,6 +368,18 @@
     </div>
   </div>
   <div class="dl-foot"><button class="btn" value="cancel" formnovalidate>Annulla</button><button class="primary" value="ok" id="ghGo">Collega</button></div>
+</form></dialog>
+<dialog id="dlgAdo"><form method="dialog" id="fAdo">
+  <h3>Collega Azure DevOps</h3>
+  <p class="sub">Le ore arrivano dal <b>Completed Work</b> dei task che ti sono assegnati o che hai modificato, nei progetti che scegli qui.
+    Serve un <i>Personal Access Token</i> (Azure DevOps → User settings → Personal access tokens) con <b>Work Items: Read &amp; write</b>;
+    aggiungi <b>Project and Team: Read</b> se vuoi scegliere i progetti da un elenco. Il PAT non finisce mai in attivita.json.</p>
+  <label class="fld">Organizzazione <input name="org" required placeholder="nome, o https://dev.azure.com/nome" autocomplete="off"></label>
+  <label class="fld">PAT <input name="pat" type="password" required autocomplete="off"></label>
+  <label class="fld">Progetti <input name="projects" required placeholder="Progetto A, Progetto B" autocomplete="off"></label>
+  <div id="adoPrj"></div>
+  <p class="sub" id="adoMsg" aria-live="polite"></p>
+  <div class="dl-foot"><button class="btn" value="cancel" formnovalidate>Annulla</button><button class="btn" type="button" id="adoLoad">Elenca progetti</button><button class="primary" value="ok" id="adoGo">Collega</button></div>
 </form></dialog>
 <dialog id="dlgSprint"><form method="dialog">
   <h3>Sprint</h3>
@@ -418,6 +436,7 @@ const migrate = () => {
     delete data.sprintDays;
   }
   data.sprints ??= []; data.sprintSkip ??= [];
+  data.devops ??= {org:null, projects:[]}; // organizzazione e progetti Azure DevOps scelti nel dialogo di collegamento
   data.ado.pushed ??= []; // ore caricate su DevOps da qui: {task, date del diario, at = giorno del caricamento, hours}
   // l'allattamento era un flag per giorno: diventa un'assenza ALL da 2 h, solo nei giorni con ore lavorate
   if (data.days) {
@@ -522,7 +541,7 @@ function ghStore({repo, path, token}) {
       const j = await r.json(); return {text: b64dec(j.content), ver: j.sha};
     },
     async write(text, v) {
-      const r = await req('PUT', {message: `Riepilogo attività: aggiornamento del ${new Date().toLocaleString('it-IT')}`, content: b64enc(text), ...(v && {sha: v})});
+      const r = await req('PUT', {message: `DevOps Timesheet: aggiornamento del ${new Date().toLocaleString('it-IT')}`, content: b64enc(text), ...(v && {sha: v})});
       if (r.status === 409 || r.status === 422) throw {conflict: true}; // sha vecchio, o mancante su un file che esiste già
       if (!r.ok) throw new Error(`GitHub HTTP ${r.status}`);
       return (await r.json()).content.sha;
@@ -589,7 +608,7 @@ async function flush() {
   saving = !!saveTimer; // un'altra modifica arrivata mentre scrivevo resta in attesa
 }
 const setStatus = (t, cls = '') => { $('status').textContent = t; $('status').className = cls; };
-const JSON_TYPE = [{description:'Riepilogo attività', accept:{'application/json':['.json']}}];
+const JSON_TYPE = [{description:'DevOps Timesheet', accept:{'application/json':['.json']}}];
 $('open').onclick = async () => { const [h] = await showOpenFilePicker({types:JSON_TYPE}); load(h); };
 // "Parto da zero": il browser chiede dove salvare il file nuovo, che nasce vuoto
 $('create').onclick = async () => {
@@ -733,7 +752,7 @@ function heroHtml() {
   const next = data.sprints.find(x => x.start > k);
   let sp = next
     ? `<button class="hero-sp none" data-sprint-chart="${data.sprints.indexOf(next)}">Nessuno sprint in corso · prossimo: <b>${esc(next.name)}</b> da ${shortDate(next.start)}</button>`
-    : `<div class="hero-sp none">Nessuno sprint in corso${pat ? '' : ' · gli sprint arrivano da Azure DevOps: collegalo con il pulsante Sync Azure DevOps'}</div>`;
+    : `<div class="hero-sp none">Nessuno sprint in corso${adoReady() ? '' : ' · gli sprint arrivano da Azure DevOps: collegalo con il pulsante Sync Azure DevOps'}</div>`;
   if (s) {
     const {days, work, cap, reg} = sprintStats(s), left = work.filter(i => i.k > k).length, elapsed = work.filter(i => i.k <= k).length * H;
     sp = `<button class="hero-sp" data-sprint-chart="${data.sprints.indexOf(s)}" title="Apri i grafici dello sprint">
@@ -949,7 +968,7 @@ function renderSprints() {
   $('spList').innerHTML = data.sprints.map((s, i) => [s, i]).reverse().map(([s, i]) => `<div class="sp-row">
     <b>${esc(s.name)}</b><span class="its">${iterChips(s.start, s.end, false) || '<span class="sub">nessuna ora su task DevOps</span>'}</span>
     <button type="button" class="icon danger" data-sphide="${i}" title="Nascondi questa finestra">✕</button></div>`).join('')
-    || `<div class="nodata">${pat ? 'Nessuna finestra trovata: compaiono le iterazioni delle release su cui hai task con ore.' : 'Collega Azure DevOps (pulsante Sync Azure DevOps): gli sprint arrivano dalle iterazioni.'}</div>`;
+    || `<div class="nodata">${adoReady() ? 'Nessuna finestra trovata: compaiono le iterazioni delle release su cui hai task con ore.' : 'Collega Azure DevOps (pulsante Sync Azure DevOps): gli sprint arrivano dalle iterazioni.'}</div>`;
   $('spRestore').hidden = !data.sprintSkip.length;
 }
 function openSprints() { renderSprints(); $('dlgSprint').showModal(); }
@@ -1232,11 +1251,17 @@ document.addEventListener('keydown', ev => {
 });
 
 // ---------- Azure DevOps ----------
-const ADO = 'https://dev.azure.com/NetaSaasPoc', ADO_PRJ = 'NetaNextGenSuite';
-let pat = null, adoAuth = () => 'Basic ' + btoa(':' + pat);
+// Organizzazione e progetti stanno nel file (data.devops), così ogni dispositivo li ritrova; il PAT invece no
+const adoOrg = () => data?.devops?.org ?? null, adoProjects = () => data?.devops?.projects ?? [];
+const adoUrl = org => `https://dev.azure.com/${encodeURIComponent(org)}`;
+let pat = null, adoAuth = (t = pat) => 'Basic ' + btoa(':' + t);
+const adoReady = () => !!(pat && adoOrg() && adoProjects().length);
+// accetta "nome", "https://dev.azure.com/nome/…" e "nome.visualstudio.com"
+const orgName = v => (v ?? '').trim().replace(/^https?:\/\//i, '').replace(/^dev\.azure\.com\//i, '').replace(/\.visualstudio\.com.*$/i, '').split('/')[0];
+const splitProjects = v => [...new Set((v ?? '').split(',').map(x => x.trim()).filter(Boolean))];
 const isWi = t => /^\d+$/.test(t ?? '');
 const wi = id => data.ado.items[id];
-const wiUrl = id => `${ADO}/${ADO_PRJ}/_workitems/edit/${id}`;
+const wiUrl = id => `${adoUrl(adoOrg())}/${encodeURIComponent(wi(id)?.project ?? adoProjects()[0] ?? '')}/_workitems/edit/${id}`;
 const iterName = t => isWi(t) ? wi(t)?.iter?.split('\\').pop() : undefined; // "M2C-Sprint8-R2"
 // ambito del task dall'Area Path: "…\M2C Credit R2" → "Credit"
 const areaName = t => isWi(t) ? wi(t)?.area?.split('\\').pop().replace(/^(M2C|MDM)\s*-?\s*/i, '').replace(/\s*-?\s*R\d+$/i, '') || undefined : undefined;
@@ -1249,9 +1274,10 @@ function adoCells(r, e) {
   const tk = r.querySelector('[data-f=task]'); if (!tk) return;
   tk.title = wiTip(e.task); r.querySelector('.tl').innerHTML = wiLink(e.task); r.querySelector('.us').innerHTML = usLink(e.task);
 }
-async function adoFetch(path, body, method = body ? 'POST' : 'GET') {
-  const r = await fetch(`${ADO}/${path}${path.includes('?') ? '&' : '?'}api-version=${path.includes('connectionData') ? '7.1-preview' : '7.1'}`,
-    {method, headers: {Authorization: adoAuth(), ...(body && {'Content-Type': method === 'PATCH' ? 'application/json-patch+json' : 'application/json'})}, body: body && JSON.stringify(body)});
+// org e token espliciti solo dal dialogo di collegamento, per provarli prima di salvarli
+async function adoFetch(path, body, method = body ? 'POST' : 'GET', org = adoOrg(), token = pat) {
+  const r = await fetch(`${adoUrl(org)}/${path}${path.includes('?') ? '&' : '?'}api-version=${path.includes('connectionData') ? '7.1-preview' : '7.1'}`,
+    {method, headers: {Authorization: adoAuth(token), ...(body && {'Content-Type': method === 'PATCH' ? 'application/json-patch+json' : 'application/json'})}, body: body && JSON.stringify(body)});
   // con un PAT non valido Azure DevOps risponde 203 con la pagina di login, non 401
   if (r.status === 401 || r.status === 203) throw Object.assign(new Error('PAT non valido o scaduto'), {auth: true});
   if (r.status === 403) throw new Error('il PAT non ha il permesso necessario (Work Items: Read & write)');
@@ -1259,7 +1285,7 @@ async function adoFetch(path, body, method = body ? 'POST' : 'GET') {
   return r.json();
 }
 const CW = 'Microsoft.VSTS.Scheduling.CompletedWork', RW = 'Microsoft.VSTS.Scheduling.RemainingWork';
-const cacheItem = w => { const f = w.fields; data.ado.items[w.id] = {title:f['System.Title'], type:f['System.WorkItemType'], parent:f['System.Parent'] ?? null, completed:f[CW] ?? null, remaining:f[RW] ?? null, rev:w.rev, state:f['System.State'], iter:f['System.IterationPath'], area:f['System.AreaPath'] ?? null}; };
+const cacheItem = w => { const f = w.fields; data.ado.items[w.id] = {title:f['System.Title'], type:f['System.WorkItemType'], parent:f['System.Parent'] ?? null, completed:f[CW] ?? null, remaining:f[RW] ?? null, rev:w.rev, state:f['System.State'], project:f['System.TeamProject'] ?? null, iter:f['System.IterationPath'], area:f['System.AreaPath'] ?? null}; };
 const CLOSED = /^(closed|done|removed|resolved)$/i;
 const isClosed = id => CLOSED.test(wi(id)?.state ?? '');
 function adoError(err) {
@@ -1271,21 +1297,22 @@ async function fetchItems(ids, force) {
   const todo = [...new Set(ids.filter(isWi).map(String))].filter(id => force || wi(id)?.area === undefined); // senza area = scaricato prima che la leggessi
   let n = 0;
   for (let i = 0; i < todo.length; i += 200) {
-    const r = await adoFetch(`_apis/wit/workitems?ids=${todo.slice(i, i + 200).join(',')}&fields=System.Title,System.WorkItemType,System.Parent,System.State,System.IterationPath,System.AreaPath,${CW},${RW}&errorPolicy=omit`);
+    const r = await adoFetch(`_apis/wit/workitems?ids=${todo.slice(i, i + 200).join(',')}&fields=System.Title,System.WorkItemType,System.TeamProject,System.Parent,System.State,System.IterationPath,System.AreaPath,${CW},${RW}&errorPolicy=omit`);
     for (const w of r.value) if (w) { n++; cacheItem(w); }
   }
   const parents = todo.map(id => wi(id)?.parent).filter(p => p && !wi(p));
   return n + (parents.length ? await fetchItems(parents) : 0);
 }
 async function ensureItems(ids) {
-  if (!pat) return 0;
+  if (!adoReady()) return 0;
   try { const n = await fetchItems(ids); if (n) save(); return n; } catch (err) { adoError(err); return 0; }
 }
 // le ore stanno nel Completed Work dei task, che è cumulativo: le ore di un giorno sono gli incrementi fatti da me quel giorno
 async function adoFind(since) {
   const who = (await adoFetch('_apis/connectionData')).authenticatedUser, me = who.properties.Account.$value.toLowerCase();
   data.ado.me = who.providerDisplayName; // nome per la testata, se non l'ho impostato a mano
-  const q = await adoFetch(`${ADO_PRJ}/_apis/wit/wiql`, {query: `SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = 'Task' AND [System.ChangedDate] >= '${since}' AND ([System.AssignedTo] = @Me OR [System.ChangedBy] = @Me)`});
+  const prj = adoProjects().map(p => `'${p.replace(/'/g, "''")}'`).join(', ');
+  const q = await adoFetch(`_apis/wit/wiql`, {query: `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] IN (${prj}) AND [System.WorkItemType] = 'Task' AND [System.ChangedDate] >= '${since}' AND ([System.AssignedTo] = @Me OR [System.ChangedBy] = @Me)`});
   const ids = q.workItems.map(w => String(w.id));
   // ponytail: una pagina di revisioni per task (200), basta finché un task non ne accumula di più
   // a gruppi di 20: dall'inizio dell'anno i task possono essere centinaia, tutti insieme Azure DevOps rallenta o rifiuta
@@ -1327,7 +1354,7 @@ function imports(found, since) {
 // se il diario ha già righe (le ha scritte a mano), dall'inizio dell'anno se è un file nuovo e vuoto.
 const syncSince = () => data.ado.syncedTo ? addDays(data.ado.syncedTo, -7) : data.entries.length ? addDays(today(), -30) : today().slice(0, 4) + '-01-01';
 async function adoSync() {
-  if (!pat) return;
+  if (!adoReady()) return;
   setStatus('Azure DevOps…', 'busy');
   try {
     const since = syncSince();
@@ -1372,7 +1399,7 @@ const unloggedIn = (u, from, to) => data.entries.filter(e => e.date >= from && e
 // Aggiunge al Completed Work dei task le ore scoperte delle righe indicate e le scala dal Remaining Work, se c'è.
 // Una sola conferma per tutto, raggruppato per task; un task che fallisce non blocca gli altri.
 async function pushMany(ids) {
-  if (!pat) return toast('Collega prima Azure DevOps (pulsante Sync Azure DevOps)');
+  if (!adoReady()) return toast('Collega prima Azure DevOps (pulsante Sync Azure DevOps)');
   try {
     const es = ids.map(find).filter(Boolean);
     await fetchItems(es.map(e => e.task), true); // valori freschi: in cache possono essere vecchi
@@ -1401,19 +1428,19 @@ async function pushMany(ids) {
     if (ok) toast(ok === plan.length ? `Caricate ${fmt(tot)} h su ${ok} task` : `Caricati ${ok} task su ${plan.length}: gli altri hanno dato errore`);
   } catch (err) { adoError(err); }
 }
-// Finestre degli sprint dalle iterazioni di Azure DevOps (le due settimane, uguali per tutti i prodotti), prese
+// Finestre degli sprint dalle iterazioni di Azure DevOps dei progetti scelti (in ognuno, quelle lunghe fino a 4 settimane), prese
 // dalle release in cui ho task con ore; se due finestre si sovrappongono vince quella dove ho più ore.
 // La finestra è solo un contenitore di date: su quali sprint ho lavorato lo dicono i task (iterHours).
 // Ritorna true se l'elenco è cambiato.
 async function adoSprints() {
-  const root = await adoFetch(`${ADO_PRJ}/_apis/wit/classificationnodes/Iterations?$depth=6`);
+  const roots = await Promise.all(adoProjects().map(p => adoFetch(`${encodeURIComponent(p)}/_apis/wit/classificationnodes/Iterations?$depth=6`)));
   const hours = {}, relHours = {}, rel = p => p.split('\\').slice(0, -1).join('\\');
   for (const e of data.entries) {
     const it = isWi(e.task) && wi(e.task)?.iter;
     if (it && +e.hours) { hours[it] = (hours[it] ?? 0) + +e.hours; relHours[rel(it)] = (relHours[rel(it)] ?? 0) + +e.hours; }
   }
   const wins = [];
-  (function walk(n, path) {
+  for (const root of roots) (function walk(n, path) {
     for (const c of n.children ?? []) {
       const p = `${path}\\${c.name}`, a = c.attributes ?? {};
       if (c.children?.length) { walk(c, p); continue; }
@@ -1444,11 +1471,11 @@ async function adoRefresh() {
 const SYNC_WARN_H = 24;
 function adoBtn() {
   const b = $('ado'), at = data?.ado?.syncedAt, age = at ? (Date.now() - Date.parse(at)) / 36e5 : Infinity;
-  b.classList.toggle('primary', !pat);
-  b.classList.toggle('stale', !!pat && age > SYNC_WARN_H);
+  b.classList.toggle('primary', !adoReady());
+  b.classList.toggle('stale', adoReady() && age > SYNC_WARN_H);
   const when = at ? new Date(at).toLocaleString('it-IT', {weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : 'mai';
-  b.title = !pat ? 'Azure DevOps non collegato: clic per inserire il Personal Access Token'
-    : `Ultima sync riuscita: ${when}${age > SYNC_WARN_H ? ` (più di ${SYNC_WARN_H} ore fa)` : ''}\nClic per sincronizzare ora · Maiusc+clic per cambiare il PAT`;
+  b.title = !adoReady() ? 'Azure DevOps non collegato: clic per scegliere organizzazione, progetti e PAT'
+    : `${adoOrg()} · ${adoProjects().join(', ')}\nUltima sync riuscita: ${when}${age > SYNC_WARN_H ? ` (più di ${SYNC_WARN_H} ore fa)` : ''}\nClic per sincronizzare ora · Maiusc+clic per cambiare progetti o PAT`;
 }
 setInterval(() => data && adoBtn(), 10 * 60e3);
 // Con i dati su GitHub il PAT di Azure DevOps sta anche nel repo privato, in segreti.json (non in attivita.json,
@@ -1462,13 +1489,49 @@ async function savePatRemote() {
     await s.write(JSON.stringify({adoPat: pat}, null, 1), cur?.ver ?? null);
   } catch (err) { toast('PAT non salvato su GitHub: ' + (err.message ?? err)); }
 }
-async function askPat() {
-  const v = prompt('Per titoli, US e ore dei task serve un Personal Access Token di Azure DevOps\n(dev.azure.com/NetaSaasPoc → User settings → Personal access tokens, scope: Work Items → Read & write).\n\n' +
-    (store?.kind === 'github' ? 'Resta in questo browser e nel tuo repo privato (segreti.json): gli altri dispositivi lo prendono da lì.' : 'Resta salvato solo in questo browser, non in attivita.json.'));
-  if (v?.trim()) { pat = v.trim(); await kv('readwrite', s => s.put(pat, 'pat')); await savePatRemote(); }
-  adoBtn();
-  return !!pat;
+// Dialogo di collegamento: organizzazione, PAT e progetti, provati prima di salvarli. Ritorna true se collegato.
+const adoMsg = (m, err) => { $('adoMsg').textContent = m; $('adoMsg').classList.toggle('err', !!err); };
+function adoSetup() {
+  const f = $('fAdo');
+  f.org.value = adoOrg() ?? ''; f.pat.value = pat ?? ''; f.projects.value = adoProjects().join(', ');
+  $('adoPrj').innerHTML = ''; adoMsg(store?.kind === 'github' ? 'Il PAT resta in questo browser e nel tuo repo privato (segreti.json): gli altri dispositivi lo prendono da lì.' : 'Il PAT resta salvato solo in questo browser.');
+  $('dlgAdo').showModal();
+  return new Promise(res => $('dlgAdo').addEventListener('close', () => res($('dlgAdo').returnValue === 'ok' && adoReady()), {once: true}));
 }
+$('adoLoad').onclick = async () => {
+  const f = $('fAdo'), org = orgName(f.org.value), token = f.pat.value.trim();
+  if (!org || !token) return adoMsg('Prima organizzazione e PAT', true);
+  adoMsg('Carico i progetti…');
+  try {
+    const r = await adoFetch('_apis/projects?$top=500', null, 'GET', org, token);
+    const sel = new Set(splitProjects(f.projects.value)), names = r.value.map(p => p.name).sort((a, b) => a.localeCompare(b));
+    $('adoPrj').innerHTML = names.map(n => `<label><input type="checkbox" value="${esc(n)}"${sel.has(n) ? ' checked' : ''}> ${esc(n)}</label>`).join('');
+    adoMsg(names.length ? 'Spunta i progetti da cui leggere le ore' : 'Nessun progetto visibile con questo PAT');
+  } catch (err) {
+    adoMsg(err.auth ? err.message : 'Questo PAT non può elencare i progetti (serve Project and Team: Read): scrivi i nomi a mano, separati da virgola', !!err.auth);
+  }
+};
+$('adoPrj').onchange = () => { $('fAdo').projects.value = [...$('adoPrj').querySelectorAll('input:checked')].map(i => i.value).join(', '); };
+$('fAdo').onsubmit = async ev => {
+  if (ev.submitter?.value !== 'ok') return;
+  ev.preventDefault();
+  const f = ev.target, org = orgName(f.org.value), token = f.pat.value.trim(), projects = splitProjects(f.projects.value);
+  if (!org || !token || !projects.length) return adoMsg('Servono organizzazione, PAT e almeno un progetto', true);
+  adoMsg('Verifico…'); $('adoGo').disabled = true;
+  try {
+    await adoFetch('_apis/connectionData', null, 'GET', org, token);
+    for (const p of projects)
+      await adoFetch(`${encodeURIComponent(p)}/_apis/wit/classificationnodes/Iterations?$depth=0`, null, 'GET', org, token)
+        .catch(err => { throw err.auth ? err : new Error(`il progetto "${p}" non esiste o il PAT non lo vede`); });
+    pat = token; await kv('readwrite', s => s.put(pat, 'pat')); await savePatRemote();
+    if (org !== adoOrg() || projects.join('\n') !== adoProjects().join('\n')) {
+      // altra organizzazione: la cache dei work item non vale più. Progetti nuovi: rileggo le ore recenti (ultimo mese)
+      if (org !== adoOrg()) data.ado.items = {};
+      data.devops = {org, projects}; data.ado.syncedTo = null; save();
+    }
+    $('dlgAdo').close('ok');
+  } catch (err) { adoMsg(err.message, true); } finally { $('adoGo').disabled = false; }
+};
 async function adoStart() {
   pat = await kv('readonly', s => s.get('pat')).catch(() => null);
   // su GitHub vince il PAT del repo: se lo cambio su un dispositivo, gli altri si aggiornano da soli
@@ -1479,12 +1542,12 @@ async function adoStart() {
     else if (pat) savePatRemote(); // primo avvio dopo il passaggio a GitHub: porto nel repo il PAT di questo browser
   }
   // senza PAT lo chiedo subito, una volta per apertura: senza non arrivano né titoli né ore
-  if (!pat && !await askPat()) return setStatus('DevOps non collegato', 'err');
+  if (!adoReady() && !await adoSetup()) return setStatus('DevOps non collegato', 'err');
   adoBtn();
   adoRefresh();
 }
 $('ado').onclick = async ev => {
-  if ((!pat || ev.shiftKey) && !await askPat()) return;
+  if ((!adoReady() || ev.shiftKey) && !await adoSetup()) return;
   adoRefresh();
 };
 

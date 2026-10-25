@@ -20,7 +20,7 @@ let T;
 (function () {
   eval(src + `;T = {imports, unlogged, merge, migrated, adoSprints, iterHours, syncSince, today, addDays, reindex, ghStore, b64enc, b64dec,
     setStore: (s, v, b) => { store = s; ver = v; base = b; }, flush, get data() { return data; },
-    linkCfg, savePatRemote, setPat: p => { pat = p; },
+    linkCfg, savePatRemote, orgName, splitProjects, setPat: p => { pat = p; },
     use: d => { data = migrated(d); reindex(); return data; }, setFetch: f => { adoFetch = f; }};`);
 })();
 
@@ -91,16 +91,34 @@ const tree = {name: 'P', children: [
 ]};
 T.setFetch(async () => tree);
 await check('finestre sprint da DevOps: nome per date, una per periodo, release senza task ignorate', async () => {
-  const d = T.use(file([E('2026-10-13', '1', 6), E('2026-10-14', '2', 2)]));
+  const d = T.use(file([E('2026-10-13', '1', 6), E('2026-10-14', '2', 2)], {devops: {org: 'o', projects: ['P']}}));
   d.ado.items['1'] = item(6, 'P\\M2C R2\\M2C-S7'); d.ado.items['2'] = item(2, 'P\\MDM R4\\MDM-S2');
   await T.adoSprints();
   assert.deepEqual(d.sprints.map(s => [s.name, s.start]), [['Sprint 12–23 ott', '2026-10-12'], ['Sprint 26 ott–6 nov', '2026-10-26']]);
 });
 await check('finestre sprint: quelle nascoste non tornano', async () => {
-  const d = T.use(file([E('2026-10-13', '1', 6)], {sprintSkip: ['2026-10-26']}));
+  const d = T.use(file([E('2026-10-13', '1', 6)], {sprintSkip: ['2026-10-26'], devops: {org: 'o', projects: ['P']}}));
   d.ado.items['1'] = item(6, 'P\\M2C R2\\M2C-S7');
   await T.adoSprints();
   assert.deepEqual(d.sprints.map(s => s.start), ['2026-10-12']);
+});
+await check('sprint da più progetti: si legge l\'albero delle iterazioni di ognuno', async () => {
+  const asked = [];
+  T.setFetch(async path => { asked.push(path); return path.startsWith('Q/') ? {name: 'Q', children: [{name: 'Q R1', children: [
+    {name: 'Q-S1', attributes: {startDate: '2026-11-09T00:00:00Z', finishDate: '2026-11-20T00:00:00Z'}}]}]} : tree; });
+  const d = T.use(file([E('2026-10-13', '1', 6), E('2026-11-10', '3', 4)], {devops: {org: 'o', projects: ['P', 'Q']}}));
+  d.ado.items['1'] = item(6, 'P\\M2C R2\\M2C-S7'); d.ado.items['3'] = item(4, 'Q\\Q R1\\Q-S1');
+  await T.adoSprints();
+  assert.equal(asked.length, 2);
+  assert.deepEqual(d.sprints.map(s => s.start), ['2026-10-12', '2026-10-26', '2026-11-09']);
+  T.setFetch(async () => tree);
+});
+await check('organizzazione e progetti: nome dall\'URL, progetti senza doppioni; file vecchio senza configurazione', () => {
+  assert.equal(T.orgName('https://dev.azure.com/Contoso/Progetto/_boards'), 'Contoso');
+  assert.equal(T.orgName('contoso.visualstudio.com'), 'contoso');
+  assert.equal(T.orgName('  Contoso '), 'Contoso');
+  assert.deepEqual(T.splitProjects('A, B ,A,, C'), ['A', 'B', 'C']);
+  assert.deepEqual(T.migrated(file([])).devops, {org: null, projects: []});
 });
 await check('formato vecchio: sprint a mano eliminati una volta sola, quelli DevOps rinominati', () => {
   const d = T.migrated(file([], {sprintDays: 14, sprints: [{name: 'Sprint 7', start: '2026-10-12', end: '2026-10-23'},

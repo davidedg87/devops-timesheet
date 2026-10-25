@@ -1,7 +1,7 @@
 {
-  "name": "Riepilogo attività",
-  "short_name": "Attività",
-  "description": "Diario ore, assenze e sprint, sincronizzato con Azure DevOps. I dati restano nel file attivita.json sul PC.",
+  "name": "DevOps Timesheet",
+  "short_name": "Timesheet",
+  "description": "Diario ore che si compila da Azure DevOps: le ore dei tuoi task nei progetti che scegli, più ferie, malattie e permessi aggiunti a mano. I dati restano in un file tuo, sul PC o in un repo GitHub privato.",
   "lang": "it",
   "start_url": "./",
   "scope": "./",
@@ -9,7 +9,15 @@
   "background_color": "#f5f6f8",
   "theme_color": "#4f46e5",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ]
 }
