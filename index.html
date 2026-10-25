@@ -244,6 +244,9 @@
   .choice { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
   .gate .card { max-width:640px; }
   .gh-new { display:flex; flex-wrap:wrap; gap:8px; }
+  .qr { width:240px; max-width:100%; margin:0 auto; background:#fff; border-radius:8px; } /* bianco anche in tema scuro: i lettori QR vogliono contrasto */
+  .qr svg { display:block; width:100%; height:auto; }
+  #dlgStore .dl-foot { flex-wrap:wrap; }
   .fld { display:grid; grid-template-columns:70px 1fr; gap:8px; align-items:center; margin-bottom:8px; font-size:13px; color:var(--muted); }
   #status { cursor:pointer; } #status:hover { color:var(--accent); }
   .opt-card { display:flex; flex-direction:column; gap:4px; padding:14px; border:1px solid var(--line); border-radius:12px; text-align:left; background:var(--bg); }
@@ -326,6 +329,16 @@
 </div>
 <div class="ac" id="ac" hidden></div>
 <input type="date" id="movePick" tabindex="-1" aria-hidden="true">
+<dialog id="dlgStore"><form method="dialog">
+  <h3>Archivio dei dati</h3>
+  <p class="sub" id="stWhere"></p>
+  <div id="stQr" hidden>
+    <p class="sub"><b>Collega un altro dispositivo:</b> inquadra il codice con la fotocamera del telefono, o di un altro PC, e apri il link.
+      Contiene l'accesso al tuo repo privato: mostralo solo ai tuoi dispositivi, non mandarlo in chat o per mail.</p>
+    <div id="qr" class="qr"></div>
+  </div>
+  <div class="dl-foot"><button class="btn" type="button" id="stQrBtn">Collega un altro dispositivo</button><button class="btn" type="button" id="stChange">Cambia archivio</button><button class="primary" value="ok">Chiudi</button></div>
+</form></dialog>
 <dialog id="dlgGh"><form method="dialog" id="fGh">
   <h3>Archivio su GitHub</h3>
   <p class="sub">Serve un tuo repo <b>privato</b> (anche vuoto) e un <i>fine-grained token</i> con accesso solo a quel repo e permesso
@@ -497,7 +510,7 @@ function ghStore({repo, path, token}) {
     return r;
   };
   return {
-    kind: 'github', label: `il repo GitHub ${repo} (${path})`,
+    kind: 'github', label: `il repo GitHub ${repo} (${path})`, cfg: {repo, path, token},
     async read() {
       const r = await req('GET'); if (r.status === 404) return null;
       if (!r.ok) throw new Error(`GitHub HTTP ${r.status}`);
@@ -585,7 +598,13 @@ $('create').onclick = async () => {
 };
 // All'avvio riapro l'ultimo archivio: GitHub senza chiedere niente; il file da solo solo se il browser
 // ha già il permesso ("Consenti a ogni visita"), altrimenti vuole un clic
-Promise.all([kv('readonly', s => s.get('gh')), kv('readonly', s => s.get('file'))]).then(async ([gh, h]) => {
+// Link "collega un altro dispositivo" (dal QR): la configurazione GitHub sta dopo il #, che il browser non manda
+// a nessun server. La salvo come archivio e la tolgo subito dall'indirizzo, così non resta nella cronologia.
+const linkCfg = hash => { const m = /^#gh=(.+)$/.exec(hash); try { return m && JSON.parse(atob(decodeURIComponent(m[1]))); } catch { return null; } };
+const fromLink = linkCfg(location.hash);
+if (location.hash.startsWith('#gh=')) history.replaceState(null, '', location.pathname + location.search);
+(fromLink?.repo && fromLink.token ? kv('readwrite', s => s.put(fromLink, 'gh')) : Promise.resolve())
+  .then(() => Promise.all([kv('readonly', s => s.get('gh')), kv('readonly', s => s.get('file'))])).then(async ([gh, h]) => {
   if (gh) return openStore(ghStore(gh)).catch(err => { $('ghMsg').textContent = ''; toast('GitHub: ' + err.message); });
   if (!h) return;
   if (await h.queryPermission({mode:'readwrite'}) === 'granted') return load(h);
@@ -645,11 +664,28 @@ $('fGh').onsubmit = async ev => {
     $('ghNew').hidden = false; $('ghGo').hidden = true;
   } catch (err) { msg('Non riuscito: ' + (err.message ?? err)); }
 };
-// clic sullo stato: dove stanno i dati, e cambio archivio
-$('status').onclick = async () => {
-  if (!store || !confirm(`I dati sono salvati su ${store.label}.\n\nVuoi cambiare archivio?`)) return;
+// clic sullo stato: dove stanno i dati, collegamento di un altro dispositivo, cambio archivio
+$('status').onclick = () => {
+  if (!store) return;
+  $('stWhere').textContent = `I dati sono salvati su ${store.label}.`;
+  $('stQrBtn').hidden = store.kind !== 'github'; $('stQr').hidden = true; $('qr').innerHTML = '';
+  $('dlgStore').showModal();
+};
+$('stChange').onclick = async () => {
+  $('dlgStore').close();
   if (saveTimer) await flush();
   $('reopen').hidden = true; $('app').hidden = true; $('gate').hidden = false;
+};
+// il QR lo disegna una libreria esterna, caricata solo quando serve
+$('stQrBtn').onclick = async () => {
+  const link = `${location.origin}${location.pathname}#gh=${encodeURIComponent(btoa(JSON.stringify(store.cfg)))}`;
+  try {
+    if (!window.qrcode) await new Promise((ok, ko) => document.head.append(Object.assign(document.createElement('script'),
+      {src: 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js', onload: ok, onerror: () => ko(new Error('libreria del QR code non raggiungibile'))})));
+    const qr = qrcode(0, 'M'); qr.addData(link); qr.make();
+    $('qr').innerHTML = qr.createSvgTag({cellSize: 5, margin: 4, scalable: true});
+    $('stQr').hidden = false;
+  } catch (err) { toast(err.message); }
 };
 
 // ---------- modifiche con undo ----------
@@ -1402,14 +1438,33 @@ function adoBtn() {
     : `Ultima sync riuscita: ${when}${age > SYNC_WARN_H ? ` (più di ${SYNC_WARN_H} ore fa)` : ''}\nClic per sincronizzare ora · Maiusc+clic per cambiare il PAT`;
 }
 setInterval(() => data && adoBtn(), 10 * 60e3);
+// Con i dati su GitHub il PAT di Azure DevOps sta anche nel repo privato, in segreti.json (non in attivita.json,
+// che finisce in export e copie): così un dispositivo nuovo ha bisogno solo del token GitHub.
+const secretsStore = () => store?.kind === 'github' ? ghStore({...store.cfg, path: 'segreti.json'}) : null;
+async function savePatRemote() {
+  const s = secretsStore(); if (!s || !pat) return;
+  try {
+    const cur = await s.read();
+    if (cur && JSON.parse(cur.text).adoPat === pat) return;
+    await s.write(JSON.stringify({adoPat: pat}, null, 1), cur?.ver ?? null);
+  } catch (err) { toast('PAT non salvato su GitHub: ' + (err.message ?? err)); }
+}
 async function askPat() {
-  const v = prompt('Per titoli, US e ore dei task serve un Personal Access Token di Azure DevOps\n(dev.azure.com/NetaSaasPoc → User settings → Personal access tokens, scope: Work Items → Read & write).\n\nResta salvato solo in questo browser, non in attivita.json.');
-  if (v?.trim()) { pat = v.trim(); await kv('readwrite', s => s.put(pat, 'pat')); }
+  const v = prompt('Per titoli, US e ore dei task serve un Personal Access Token di Azure DevOps\n(dev.azure.com/NetaSaasPoc → User settings → Personal access tokens, scope: Work Items → Read & write).\n\n' +
+    (store?.kind === 'github' ? 'Resta in questo browser e nel tuo repo privato (segreti.json): gli altri dispositivi lo prendono da lì.' : 'Resta salvato solo in questo browser, non in attivita.json.'));
+  if (v?.trim()) { pat = v.trim(); await kv('readwrite', s => s.put(pat, 'pat')); await savePatRemote(); }
   adoBtn();
   return !!pat;
 }
 async function adoStart() {
   pat = await kv('readonly', s => s.get('pat')).catch(() => null);
+  // su GitHub vince il PAT del repo: se lo cambio su un dispositivo, gli altri si aggiornano da soli
+  const s = secretsStore();
+  if (s) {
+    const remote = await s.read().then(c => c && JSON.parse(c.text).adoPat).catch(() => null);
+    if (remote) { if (remote !== pat) { pat = remote; await kv('readwrite', st => st.put(pat, 'pat')); } }
+    else if (pat) savePatRemote(); // primo avvio dopo il passaggio a GitHub: porto nel repo il PAT di questo browser
+  }
   // senza PAT lo chiedo subito, una volta per apertura: senza non arrivano né titoli né ore
   if (!pat && !await askPat()) return setStatus('DevOps non collegato', 'err');
   adoBtn();

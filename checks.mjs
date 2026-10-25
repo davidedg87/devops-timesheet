@@ -13,12 +13,14 @@ const stub = () => new Proxy(function () {}, {
   set: () => true, apply: () => stub(),
 });
 Object.assign(globalThis, {document: stub(), window: stub(), indexedDB: {open: stub}, localStorage: {getItem: () => null, setItem() {}},
-  setInterval: () => 0}); // i timer della pagina terrebbero vivo il processo all'infinito
+  setInterval: () => 0, // i timer della pagina terrebbero vivo il processo all'infinito
+  location: {hash: '', pathname: '/', search: '', origin: 'https://esempio'}, history: {replaceState() {}}});
 
 let T;
 (function () {
   eval(src + `;T = {imports, unlogged, merge, migrated, adoSprints, iterHours, syncSince, today, addDays, reindex, ghStore, b64enc, b64dec,
     setStore: (s, v, b) => { store = s; ver = v; base = b; }, flush, get data() { return data; },
+    linkCfg, savePatRemote, setPat: p => { pat = p; },
     use: d => { data = migrated(d); reindex(); return data; }, setFetch: f => { adoFetch = f; }};`);
 })();
 
@@ -169,6 +171,23 @@ await check('GitHub: salvataggio con file cambiato da un altro PC → unisce inv
   await T.flush();
   assert.deepEqual(JSON.parse(repo.text).entries.map(e => e.task), ['1', '2', '3']);
   assert.equal(T.data.entries.length, 3);
+});
+
+// ---------- altri dispositivi: link del QR e PAT nel repo ----------
+await check('link del QR: la configurazione GitHub torna identica; link malformati ignorati', () => {
+  const cfg = {repo: 'u/riepilogo-dati', path: 'attivita.json', token: 'github_pat_ABC123'};
+  assert.deepEqual(T.linkCfg('#gh=' + encodeURIComponent(btoa(JSON.stringify(cfg)))), cfg);
+  assert.equal(T.linkCfg('#gh=%%%'), null);
+  assert.equal(T.linkCfg(''), null);
+});
+await check('PAT Azure DevOps salvato nel repo privato, e riscritto solo se cambia', async () => {
+  const repo = fakeGitHub(null);
+  T.setStore(T.ghStore({repo: 'u/r', path: 'attivita.json', token: 't'}), null, '{}');
+  T.setPat('pat-1'); await T.savePatRemote();
+  assert.deepEqual(JSON.parse(repo.text), {adoPat: 'pat-1'});
+  await T.savePatRemote(); assert.equal(repo.puts, 1);       // stesso PAT: nessun commit in più
+  T.setPat('pat-2'); await T.savePatRemote();
+  assert.deepEqual([JSON.parse(repo.text).adoPat, repo.puts], ['pat-2', 2]);
 });
 
 console.log(`\n${n} controlli superati`);
