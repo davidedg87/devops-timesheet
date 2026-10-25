@@ -12,7 +12,7 @@
   :root {
     --bg:#f5f6f8; --card:#fff; --fg:#17181c; --muted:#6b7280; --faint:#9ca3af; --line:#e5e7eb; --hover:#f3f4f6;
     --accent:#4f46e5; --accent-soft:#eef0ff; --warn:#b45309; --warn-soft:#fff7ed; --bad:#dc2626; --ok:#059669; --we:#fafafb;
-    --cols: 20px minmax(220px,1fr) 142px 62px 64px 46px 150px minmax(140px,.8fr) 94px;
+    --cols: 20px minmax(220px,1fr) 150px 64px minmax(0,.8fr) 124px;
     --shadow: 0 1px 2px rgba(16,24,40,.05);
     --s1:#2a78d6; --s2:#eb6834;
   }
@@ -73,6 +73,7 @@
   .page-title { font-size:18px; font-weight:650; margin:0 8px 0 4px; letter-spacing:-.01em; }
   .tabbar { display:none; }
   /* impostazioni */
+  .welcome { margin-top:12px; }
   .set { display:grid; gap:14px; max-width:760px; }
   .set-card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 20px; box-shadow:var(--shadow); }
   .set-card h3 { margin:0 0 6px; font-size:16px; display:flex; align-items:center; gap:8px; }
@@ -87,7 +88,10 @@
   .badge { min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:var(--warn-soft); color:var(--warn); font-size:11px; font-weight:700; display:inline-grid; place-items:center; }
   main { padding:18px 28px 80px; min-width:0; }
 
-  .hero { display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; margin-bottom:14px; }
+  .hero { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+  .sb { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:20px; background:var(--card); border:1px solid var(--line); color:var(--muted); font-size:13px; }
+  .sb b { color:var(--fg); } button.sb:hover { border-color:var(--accent); }
+  .sb.warn, .sb.push { border-color:var(--warn); color:var(--warn); background:var(--warn-soft); } .sb.warn b, .sb.push b { color:var(--warn); }
   .hero-who { display:flex; flex-direction:column; justify-content:center; min-width:220px; }
   .hero-name { font-size:24px; font-weight:650; letter-spacing:-.02em; padding:0; text-align:left; }
   .hero-name:hover { color:var(--accent); }
@@ -101,6 +105,7 @@
   .hs-bar u { position:absolute; top:-3px; width:2px; height:14px; background:var(--fg); opacity:.5; transform:translateX(-1px); }
   .link { color:var(--accent); padding:0; text-decoration:underline; }
   .kpis { display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .sp-head .sp-sum { margin-left:auto; } .sp-head .its { flex-basis:100%; }
   .sp-head { width:100%; display:flex; align-items:center; flex-wrap:wrap; gap:4px 10px; padding:9px 14px; margin:10px 0 8px; border-radius:10px; background:var(--accent-soft); border:1px solid transparent; }
   .sp-head.shut { background:var(--card); border-color:var(--line); }
   .sp-head b { font-size:15px; } .sp-head span { color:var(--muted); font-size:13px; }
@@ -115,7 +120,10 @@
 
   /* quick add + column header, sticky */
   .sticky { position:sticky; top:56px; z-index:10; background:var(--bg); padding:4px 0 6px; margin:0 -4px; }
-  .quick { display:grid; grid-template-columns:150px minmax(220px,1fr) 92px 70px 150px minmax(120px,.7fr) auto; gap:6px; padding:8px; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); margin:0 4px; }
+  .quick.more { grid-template-columns:150px minmax(220px,1fr) 110px 70px 150px minmax(120px,.7fr) auto; }
+  .quick:not(.more) #qCom, .quick:not(.more) #qNote { display:none; }
+  #qMore { color:var(--muted); padding:0 8px; } #qMore:hover { color:var(--accent); }
+  .quick { display:grid; grid-template-columns:150px minmax(220px,1fr) 110px 70px auto auto; gap:6px; padding:8px; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); margin:0 4px; }
   .quick input { padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:inherit; font:inherit; min-width:0; }
   .quick input:focus { border-color:var(--accent); background:var(--card); outline:none; box-shadow:0 0 0 3px var(--accent-soft); }
   .primary { background:var(--accent); color:#fff; padding:8px 16px; font-weight:600; }
@@ -163,7 +171,9 @@
   .row input::placeholder { color:var(--faint); }
   .row input.bad { border-color:var(--bad); }
   .row [data-f=hours] { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
-  .pct { text-align:right; color:var(--faint); font-size:12px; font-variant-numeric:tabular-nums; }
+  .det { display:flex; align-items:center; gap:4px; min-width:0; }
+  .det input { flex:1; } .row .opt.hide { display:none; } .row.more .opt.hide { display:block; }
+  .us a::before { content:"US "; color:var(--faint); }
   .grip { cursor:grab; color:var(--faint); text-align:center; opacity:0; user-select:none; }
   .acts { display:flex; opacity:0; }
   .row:hover .grip, .row:hover .acts, .row:focus-within .acts { opacity:1; }
@@ -315,12 +325,14 @@
   @media (max-width: 1000px) {
     #app { grid-template-columns:1fr; } .side { display:none; }
     main { padding:14px 14px 96px; } .top { padding:0 12px; gap:6px; } .page-title { display:none; }
-    .tabbar { display:grid; grid-template-columns:repeat(5, 1fr); position:fixed; left:0; right:0; bottom:0; z-index:30; background:var(--card); border-top:1px solid var(--line); padding:4px 4px calc(4px + env(safe-area-inset-bottom)); }
+    .tabbar { display:grid; grid-template-columns:repeat(4, 1fr); position:fixed; left:0; right:0; bottom:0; z-index:30; background:var(--card); border-top:1px solid var(--line); padding:4px 4px calc(4px + env(safe-area-inset-bottom)); }
     .tabbar .nav-i { flex-direction:column; gap:2px; padding:6px 2px; font-size:11px; text-align:center; }
     #toast { bottom:84px; }
     .nav h1 { min-width:0; font-size:16px; margin:0 2px; } .search { min-width:80px; }
-    :root { --cols: 20px minmax(160px,1fr) 110px 58px 56px 40px 0 0 94px; }
-    .row [data-f=commessa], .row [data-f=note], .colhead span:nth-child(7), .colhead span:nth-child(8) { display:none; }
+    :root { --cols: 6px minmax(100px,1fr) 84px 46px 0 60px; }
+    .row .det, .grip { visibility:hidden; overflow:hidden; } .colhead span:nth-child(5) { visibility:hidden; }
+    .acts [data-move], .acts [data-dup] { display:none; } .acts .icon { width:26px; }
+    .dhead { gap:6px; } .dhead .bar { display:none; } .abs-pick { max-width:110px; }
     .quick { grid-template-columns:1fr 1fr; } .search { flex:1; } .search input { width:100%; } #status { display:none; }
   }
   @media print {
@@ -379,9 +391,8 @@
     <button class="nav-i" data-view="diary" title="Diario"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h9a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2V4a1 1 0 0 1 1-1z"/><path d="M7.5 7h5M7.5 10.5h5"/></svg><span>Diario</span></button>
     <button class="nav-i" data-view="ras" title="Mese"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2.5v3M13 2.5v3M7 11.5h.01M10 11.5h.01M13 11.5h.01M7 14.5h.01M10 14.5h.01"/></svg><span>Mese</span></button>
     <button class="nav-i" data-view="charts" title="Grafici"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9M8.5 16V4M13 16v-5M17 16H3"/></svg><span>Grafici</span></button>
-    <button class="nav-i" data-act="sprints" title="Sprint"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a6 6 0 0 1 10.2-4.3L16 7.5M16 3.5v4h-4M16 10a6 6 0 0 1-10.2 4.3L4 12.5M4 16.5v-4h4"/></svg><span>Sprint</span></button>
+    
     <button class="nav-i" data-act="export" title="Esporta"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M6.5 8.5 10 12l3.5-3.5M4 14v2a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2"/></svg><span>Esporta</span></button>
-    <div class="months" id="side"></div>
     <div class="side-foot">
       <div class="ado-card"><div class="adc-top"><span class="dot" id="adoDot"></span><b>Azure DevOps</b></div><div class="adc-sub" id="adoSub"></div><button class="btn" id="ado"></button></div>
       <button class="nav-i" data-view="settings" title="Impostazioni"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.5"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/></svg><span>Impostazioni</span></button>
@@ -401,7 +412,6 @@
   </header>
     <main>
       <div class="hero" id="hero"></div>
-      <div class="kpis" id="kpis"></div>
       <div class="sticky">
         <form class="quick" id="quick" autocomplete="off">
           <input type="date" id="qDate" required title="Giorno">
@@ -409,10 +419,11 @@
           <input id="qTask" class="mono" placeholder="Task">
           <input id="qH" inputmode="decimal" placeholder="Ore">
           <input id="qCom" placeholder="Commessa">
-          <input id="qNote" placeholder="Note">
+          <input id="qNote" placeholder="Nota">
+          <button type="button" id="qMore" title="Commessa e nota">Altro ▾</button>
           <button class="primary">Aggiungi ↵</button>
         </form>
-        <div class="colhead" id="colhead"><span></span><span>Attività</span><span>Task</span><span>US</span><span style="text-align:right">Ore</span><span style="text-align:right">%</span><span>Commessa</span><span>Note</span><span></span></div>
+        <div class="colhead" id="colhead"><span></span><span>Attività</span><span>Task</span><span style="text-align:right">Ore</span><span>Dettagli</span><span></span></div>
       </div>
       <div id="content"></div>
       <div class="help" id="help">
@@ -423,7 +434,7 @@
     </main>
   </div>
   <nav class="tabbar">
-    <button class="nav-i" data-view="diary" title="Diario"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h9a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2V4a1 1 0 0 1 1-1z"/><path d="M7.5 7h5M7.5 10.5h5"/></svg><span>Diario</span></button><button class="nav-i" data-view="ras" title="Mese"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2.5v3M13 2.5v3M7 11.5h.01M10 11.5h.01M13 11.5h.01M7 14.5h.01M10 14.5h.01"/></svg><span>Mese</span></button><button class="nav-i" data-view="charts" title="Grafici"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9M8.5 16V4M13 16v-5M17 16H3"/></svg><span>Grafici</span></button><button class="nav-i" data-act="sprints" title="Sprint"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a6 6 0 0 1 10.2-4.3L16 7.5M16 3.5v4h-4M16 10a6 6 0 0 1-10.2 4.3L4 12.5M4 16.5v-4h4"/></svg><span>Sprint</span></button><button class="nav-i" data-view="settings" title="Altro"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.5"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/></svg><span>Altro</span></button>
+    <button class="nav-i" data-view="diary" title="Diario"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h9a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2V4a1 1 0 0 1 1-1z"/><path d="M7.5 7h5M7.5 10.5h5"/></svg><span>Diario</span></button><button class="nav-i" data-view="ras" title="Mese"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2.5v3M13 2.5v3M7 11.5h.01M10 11.5h.01M13 11.5h.01M7 14.5h.01M10 14.5h.01"/></svg><span>Mese</span></button><button class="nav-i" data-view="charts" title="Grafici"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9M8.5 16V4M13 16v-5M17 16H3"/></svg><span>Grafici</span></button><button class="nav-i" data-view="settings" title="Altro"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.5"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/></svg><span>Altro</span></button>
   </nav>
 </div>
 <div class="ac" id="ac" hidden></div>
@@ -837,46 +848,36 @@ function render() {
   const set = !query && view === 'settings';
   $('pageTitle').textContent = query ? 'Ricerca' : TITLES[view];
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', !query && b.dataset.view === view));
-  $('monthNav').hidden = set; $('hero').hidden = $('kpis').hidden = set;
-  $('quick').closest('.sticky').hidden = !!query || view !== 'diary'; $('help').hidden = !!query || view !== 'diary';
+  $('monthNav').hidden = set; $('hero').hidden = set || view === 'charts' || !data.entries.length;
+  $('quick').closest('.sticky').hidden = !!query || view !== 'diary'; $('colhead').hidden = !data.entries.length; $('help').hidden = true; // le scorciatoie stanno nelle Impostazioni
   renderChrome();
   $('content').innerHTML = query ? searchView() : set ? settingsView() : view === 'diary' ? diary() : view === 'ras' ? ras() : charts();
   if (!query && view === 'diary') paintWarnings();
 }
 // testata: chi sono, oggi, e lo sprint che contiene oggi (non quello del mese visualizzato)
 function heroHtml() {
-  const k = today(), s = sprintOf(k), name = data.owner || data.ado.me;
-  const next = data.sprints.find(x => x.start > k);
-  let sp = next
-    ? `<button class="hero-sp none" data-sprint-chart="${data.sprints.indexOf(next)}">Nessuno sprint in corso · prossimo: <b>${esc(next.name)}</b> da ${shortDate(next.start)}</button>`
-    : `<div class="hero-sp none">Nessuno sprint in corso${adoReady() ? '' : ' · gli sprint arrivano da Azure DevOps: collegalo dalle Impostazioni'}</div>`;
+  const k = today(), s = sprintOf(k), [y, m] = ym, st = monthStats(y, m), parts = [];
+  parts.push(`<span class="sb"><b>${fmt(st.hours) || 0} h</b> a ${MONTHS[m].toLowerCase()}</span>`);
+  parts.push(st.missing
+    ? `<button class="sb warn" data-goto="${st.first}"><b>${st.missing}</b> ${st.missing === 1 ? 'giorno da compilare' : 'giorni da compilare'} →</button>`
+    : `<span class="sb"><b>${st.done}/${st.work}</b> giorni compilati <span style="color:var(--ok)">✓</span></span>`);
   if (s) {
-    const {days, work, cap, reg} = sprintStats(s), left = work.filter(i => i.k > k).length, elapsed = work.filter(i => i.k <= k).length * H;
-    sp = `<button class="hero-sp" data-sprint-chart="${data.sprints.indexOf(s)}" title="Apri i grafici dello sprint">
-      <span class="hs-top"><b>${esc(s.name)}</b><span class="its">${iterChips(s.start, s.end, false)}</span></span>
-      <span class="hs-meta">Giorno ${days.findIndex(i => i.k === k) + 1} di ${days.length} · ${left} ${left === 1 ? 'giorno lavorativo rimasto' : 'giorni lavorativi rimasti'}</span>
-      <span class="bar hs-bar" title="Il segno indica le ore attese fino a oggi"><i style="width:${Math.min(100, reg / cap * 100)}%"></i><u style="left:${elapsed / cap * 100}%"></u></span>
-      <span class="hs-meta"><b>${fmt(reg) || 0}</b> / ${cap} h registrate · attese a oggi ${elapsed}</span></button>`;
+    const {days, cap, reg} = sprintStats(s);
+    parts.push(`<button class="sb" data-sprint-chart="${data.sprints.indexOf(s)}" title="Apri i grafici dello sprint"><b>${esc(s.name)}</b> · giorno ${days.findIndex(i => i.k === k) + 1} di ${days.length} · ${fmt(reg) || 0}/${cap} h</button>`);
   }
-  const oggi = new Date().toLocaleDateString('it-IT', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-  return `<div class="hero-who"><button class="hero-name" data-owner title="Clic per cambiare">${esc(name) || 'Imposta nome e cognome'}</button><span class="hs-meta">${oggi}</span></div>${sp}`;
+  const u = [...uMap.values()].reduce((a, b) => a + b, 0);
+  if (u) parts.push(`<button class="sb push" data-push-all title="Carica su Azure DevOps le ore scritte qui e non ancora sui task">⚠ <b>${fmt(u)} h</b> non ancora su DevOps · Carica</button>`);
+  return parts.join('');
 }
 $('hero').onclick = ev => {
   const t = ev.target.closest('button'); if (!t) return;
-  if ('owner' in t.dataset) {
-    const v = prompt('Nome e cognome da mostrare in testata (vuoto = quello di Azure DevOps)', data.owner || data.ado.me || '');
-    if (v !== null) { mutate(() => { data.owner = v.trim() || undefined; }); renderChrome(); }
-  } else if ('sprints' in t.dataset) openSprints();
+  if (t.dataset.goto) scrollToDay(t.dataset.goto);
+  else if ('pushAll' in t.dataset) pushMany([...unlogged().keys()]);
   else if (t.dataset.sprintChart) { view = 'charts'; query = ''; $('q').value = ''; chartSprint = +t.dataset.sprintChart; render(); window.scrollTo(0, 0); }
 };
 function renderChrome() {
-  const [y, m] = ym, s = monthStats(y, m);
+  uMap = data.entries.length ? unlogged() : new Map();
   $('hero').innerHTML = heroHtml(); adoBtn();
-  $('side').innerHTML = `<div class="year"><button class="icon" data-year="-1">‹</button>${y}<button class="icon" data-year="1">›</button></div>` +
-    MONTHS.map((n, i) => { const t = monthStats(y, i); return `<button class="mon${i === m ? ' on' : ''}" data-mon="${i}"><span>${n}</span>${t.missing ? `<span class="badge" title="Giorni da compilare">${t.missing}</span>` : ''}<span class="mh">${t.hours ? fmt(t.hours) + ' h' : ''}</span></button>`; }).join('');
-  $('kpis').innerHTML = `<div class="kpi"><b>${fmt(s.hours) || 0}</b><span>ore registrate</span></div>
-    <div class="kpi"><b>${s.done}<span style="font-size:15px;color:var(--faint)"> / ${s.work}</span></b><span>giorni lavorativi compilati</span></div>
-    ${s.missing ? `<button class="kpi warn" data-goto="${s.first}"><b>${s.missing}</b><span>giorni da compilare →</span></button>` : `<div class="kpi"><b style="color:var(--ok)">✓</b><span>nessun giorno scoperto</span></div>`}`;
 }
 function totHtml(tot) {
   if (!tot) return '';
@@ -908,11 +909,15 @@ function sprintHead(s) {
   // solo i passati si comprimono: quello in corso e i futuri restano sempre aperti
   return `<div class="sp-head${past && !open ? ' shut' : ''}">${past
     ? `<button class="sp-tg" data-sptoggle="${s.start}" aria-expanded="${open}" title="${open ? 'Comprimi' : 'Espandi'} lo sprint"><span class="sp-car">${open ? '▾' : '▸'}</span>${title}</button>` : title}
-    ${state}<span class="its">${iterChips(s.start, s.end)}</span><span class="sp-sum">${fmt(reg) || 0} / ${cap} h${miss ? ` · <em>${miss} da compilare</em>` : ''}</span>${pushBtn(s.start, s.end)}</div>`;
+    ${state}<span class="sp-sum">${fmt(reg) || 0} / ${cap} h${miss ? ` · <em>${miss} da compilare</em>` : ''}${unloggedIn(uMap, s.start, s.end).length ? ' · <em>ore da caricare</em>' : ''}</span>
+    ${open ? `<span class="its">${iterChips(s.start, s.end)}</span>` : ''}</div>`;
 }
 let uMap = new Map(); // ore scoperte per riga, ricalcolate a ogni disegno del diario
 function diary() {
   uMap = unlogged();
+  if (!data.entries.length) return `<div class="set-card welcome"><h3>Il tuo diario è vuoto</h3>
+    <p>${adoReady() ? 'Scarica le ore che hai già registrato sui task di Azure DevOps, o scrivi la prima attività.' : 'Collega Azure DevOps per avere le ore dei tuoi task, o scrivi la prima attività a mano.'}</p>
+    <div class="set-act"><button class="primary" data-welcome="ado">${adoReady() ? '⟳ Sincronizza da Azure DevOps' : 'Collega Azure DevOps'}</button><button class="btn" data-welcome="add">＋ Aggiungi un'attività</button></div></div>`;
   let h = '', weBuf = [], cur = null;
   const flush = () => { if (weBuf.length) h += `<div class="we-strip">${weBuf.join(' · ')}</div>`; weBuf = []; };
   for (const d of monthDays(...ym)) {
@@ -929,8 +934,8 @@ function dayCard(i) {
   const cls = ['day', i.k === today() && 'today', i.missing && 'missing', i.hol && !i.es.length && 'holiday', i.we && 'weekend'].filter(Boolean).join(' ');
   let h = `<section class="${cls}" id="d-${i.k}" data-day="${i.k}"><div class="dhead">
     <div class="date"><span class="dnum">${i.d.getDate()}</span><span class="dname">${DOW[i.d.getDay()]}</span></div>
-    ${sprintChip(i.k)}<span class="its">${iterChips(i.k, i.k, false)}</span>${i.hol ?`<span class="chip">${esc(i.hol)}</span>` : ''}${i.missing ? '<span class="chip warn">Da compilare</span>' : ''}
-    <div class="dmeta">${pushBtn(i.k, i.k)}<span class="tot" data-tot="${i.k}">${totHtml(i.tot)}</span>
+    ${i.hol ?`<span class="chip">${esc(i.hol)}</span>` : ''}${i.missing ? '<span class="chip warn">Da compilare</span>' : ''}
+    <div class="dmeta"><span class="tot" data-tot="${i.k}">${totHtml(i.tot)}</span>
     ${i.we || i.hol ? '' : `<select class="abs-pick" data-abs="${i.k}" title="Aggiungi un'assenza a questo giorno"><option value="">＋ Assenza</option>${codeOpts()}</select>`}
     <button class="icon" data-add="${i.k}" title="Aggiungi attività a questo giorno">＋</button></div></div>`;
   if (i.es.length) h += i.es.map(row).join('');
@@ -943,12 +948,9 @@ const row = e => `<div class="row${e.absence || e.hours == null ? ' absence' : '
   <input data-f="activity" ${e.absence ? '' : 'data-ac'} value="${esc(e.activity)}" placeholder="${e.absence ? 'Causale' : 'Attività'}" title="${esc(e.activity)}">
   ${e.absence ? `<select data-f="absence" class="mono" title="${esc(CODE[e.absence]?.causale ?? e.absence)}">${CODE[e.absence] ? '' : `<option selected>${esc(e.absence)}</option>`}${codeOpts(e.absence)}</select>`
     : `<span class="tk"><input data-f="task" class="mono" value="${esc(e.task)}" placeholder="—" title="${esc(wiTip(e.task))}"><span class="tl">${wiLink(e.task)}</span><span data-aw="${e.id}"></span>${e.adoDate ? `<span class="moved" title="Su Azure DevOps queste ore risultano caricate ${shortDate(e.adoDate)}">⇄</span>` : ''}</span>`}
-  <span class="us">${usLink(e.task)}</span>
   <input data-f="hours" inputmode="decimal" value="${fmt(e.hours)}" placeholder="ore" title="${e.absence ? `Ore di assenza (vuoto = giornata intera, ${H} h)` : 'Ore'}">
-  <span class="pct">${pct(e.hours)}</span>
-  <input data-f="commessa" value="${esc(e.commessa)}" placeholder="">
-  <input data-f="note" value="${esc(e.note)}" placeholder="" title="${esc(e.note)}">
-  <span class="acts"><button class="icon" data-move="${e.id}" title="Sposta su un altro giorno">⇄</button><button class="icon" data-dup="${e.id}" title="Duplica (Ctrl+D)">⧉</button><button class="icon danger" data-del="${e.id}" title="Elimina">✕</button></span></div>`;
+  <span class="det"><span class="us">${usLink(e.task)}</span><input data-f="commessa" class="opt${e.commessa ? '' : ' hide'}" value="${esc(e.commessa)}" placeholder="Commessa" title="Commessa"><input data-f="note" class="opt${e.note ? '' : ' hide'}" value="${esc(e.note)}" placeholder="Nota" title="${esc(e.note) || 'Nota'}"></span>
+  <span class="acts">${e.commessa && e.note ? '' : `<button class="icon" data-more="${e.id}" title="Aggiungi commessa o nota">✎</button>`}<button class="icon" data-move="${e.id}" title="Sposta su un altro giorno">⇄</button><button class="icon" data-dup="${e.id}" title="Duplica (Ctrl+D)">⧉</button><button class="icon danger" data-del="${e.id}" title="Elimina">✕</button></span></div>`;
 
 function ras() {
   const infos = monthDays(...ym).map(dayInfo), rows = new Map();
@@ -1095,6 +1097,8 @@ function settingsView() {
     <div class="set-act"><button class="btn" data-set="name">Cambia nome</button></div>
     <p style="margin-top:16px">Ore in una giornata lavorativa: servono per le barre dei giorni, le ore attese degli sprint e le assenze di giornata intera.</p>
     <div class="set-act"><label class="ico">Ore al giorno <input id="hpd" inputmode="decimal" value="${fmt(H)}" style="width:80px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:inherit;font:inherit"></label></div></section>
+  <section class="set-card"><h3>Sprint</h3><p>Le finestre degli sprint arrivano dalle iterazioni di Azure DevOps. Qui puoi nascondere quelle che non ti servono.</p>
+    <div class="set-act"><button class="btn" data-set="sprints">Gestisci sprint</button></div></section>
   <section class="set-card"><h3>Esporta</h3><p>Un CSV per settimana, mese o sprint, pronto per Excel.</p>
     <div class="set-act"><button class="btn" data-set="export">Esporta…</button></div></section>
   <section class="set-card"><h3>Scorciatoie da tastiera</h3><div class="keys">${$('help').innerHTML}</div></section>
@@ -1107,6 +1111,7 @@ $('content').addEventListener('click', async ev => {
   else if (a === 'qr') openStoreDlg(true);
   else if (a === 'store') $('stChange').click();
   else if (a === 'export') openExport();
+  else if (a === 'sprints') openSprints();
   else if (a === 'name') {
     const v = prompt('Nome e cognome da mostrare in testata (vuoto = quello di Azure DevOps)', data.owner || data.ado.me || '');
     if (v !== null) { mutate(() => { data.owner = v.trim() || undefined; }); render(); }
@@ -1180,13 +1185,9 @@ $('prev').onclick = () => goMonth(...(ym[1] ? [ym[0], ym[1]-1] : [ym[0]-1, 11]))
 $('next').onclick = () => goMonth(...(ym[1] < 11 ? [ym[0], ym[1]+1] : [ym[0]+1, 0]));
 $('today').onclick = () => scrollToDay(today());
 $('q').oninput = () => { query = $('q').value.trim(); render(); };
-$('side').onclick = ev => {
-  const t = ev.target.closest('button'); if (!t) return;
-  if (t.dataset.mon) goMonth(ym[0], +t.dataset.mon); else if (t.dataset.year) goMonth(ym[0] + +t.dataset.year, ym[1]);
-};
-$('kpis').onclick = ev => { const t = ev.target.closest('[data-goto]'); if (t) scrollToDay(t.dataset.goto); };
 
 // ---------- inserimento rapido ----------
+$('qMore').onclick = () => { const on = $('quick').classList.toggle('more'); $('qMore').textContent = on ? 'Meno ▴' : 'Altro ▾'; if (on) $('qCom').focus(); };
 $('quick').onsubmit = ev => {
   ev.preventDefault();
   const hours = parseHours($('qH').value);
@@ -1208,6 +1209,9 @@ $('content').addEventListener('click', ev => {
   if (ds.add) { $('qDate').value = ds.add; $('qAct').focus(); $('qAct').select(); }
   else if (ds.del) { const e = find(ds.del); mutate(() => data.entries.splice(data.entries.indexOf(e), 1), `Eliminata “${e.activity.slice(0, 40)}”`); render(); }
   else if (ds.sptoggle) { toggleSprint(ds.sptoggle); render(); }
+  else if (ds.more) { const r = t.closest('.row'); r.classList.add('more'); r.querySelector('[data-f=commessa].hide, [data-f=note].hide')?.focus(); }
+  else if (ds.welcome === 'add') { $('qAct').focus(); }
+  else if (ds.welcome === 'ado') { if (adoReady()) adoRefresh(); else adoSetup(false).then(ok => { adoBtn(); render(); if (ok) adoRefresh(); }); }
   else if (ds.dup) duplicate(ds.dup);
   else if (ds.move) pickDay(ds.move, t);
   else if (ds.absent) addAbsence(ds.date, ds.absent);
@@ -1272,7 +1276,6 @@ function commit(t, extra) {
   else if (gap && (f === 'hours' || f === 'task')) toast(`${fmt(gap)} h sul task ${e.task} non sono ancora su Azure DevOps`, false, {label:'Caricale', fn:() => pushMany([e.id])});
   r.querySelector('[data-f=commessa]').value = e.commessa ?? '';
   r.querySelector('[data-f=hours]').value = fmt(e.hours);
-  r.querySelector('.pct').textContent = pct(e.hours);
   r.classList.toggle('absence', !!e.absence || e.hours == null);
   document.querySelector(`[data-tot="${e.date}"]`).innerHTML = totHtml(byDate.get(e.date).reduce((s, x) => s + (+x.hours || 0), 0));
   renderChrome();
@@ -1281,7 +1284,7 @@ $('content').addEventListener('focusin', ev => { if (ev.target.matches('[data-f=
 $('content').addEventListener('keydown', ev => {
   const t = ev.target; if (!t.dataset.f || acOpenFor || t.tagName === 'SELECT') return; // sulle combo le frecce restano native
   const move = dir => {
-    const all = [...document.querySelectorAll(`#content [data-f="${t.dataset.f}"]`)], n = all[all.indexOf(t) + dir];
+    const all = [...document.querySelectorAll(`#content [data-f="${t.dataset.f}"]`)].filter(x => x.offsetParent), n = all[all.indexOf(t) + dir];
     if (n) { ev.preventDefault(); n.focus(); }
   };
   if (ev.key === 'ArrowDown' || (ev.key === 'Enter' && !ev.shiftKey)) { commit(t); move(1); }
