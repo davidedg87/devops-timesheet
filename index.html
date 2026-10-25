@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Riepilogo attività</title>
+<!-- installabile come app (Chrome/Edge: icona "Installa" nella barra degli indirizzi) -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#4f46e5">
 <style>
   :root {
     --bg:#f5f6f8; --card:#fff; --fg:#17181c; --muted:#6b7280; --faint:#9ca3af; --line:#e5e7eb; --hover:#f3f4f6;
@@ -69,12 +73,12 @@
   .hs-bar u { position:absolute; top:-3px; width:2px; height:14px; background:var(--fg); opacity:.5; transform:translateX(-1px); }
   .link { color:var(--accent); padding:0; text-decoration:underline; }
   .kpis { display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
-  .sp-head { width:100%; display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; padding:9px 14px; margin:10px 0 8px; border-radius:10px; background:var(--accent-soft); text-align:left; }
-  .sp-head b { font-size:15px; } .sp-head > span { color:var(--muted); font-size:13px; }
+  .sp-head { width:100%; display:flex; align-items:center; flex-wrap:wrap; gap:4px 10px; padding:9px 14px; margin:10px 0 8px; border-radius:10px; background:var(--accent-soft); border:1px solid transparent; }
+  .sp-head.shut { background:var(--card); border-color:var(--line); }
+  .sp-head b { font-size:15px; } .sp-head span { color:var(--muted); font-size:13px; }
+  .sp-tg { display:flex; align-items:baseline; gap:10px; padding:2px 6px; margin:-2px -6px; }
+  .sp-tg:hover { background:var(--hover); } .sp-tg span.sp-car { color:var(--accent); width:12px; }
   .sp-head .sp-sum { margin-left:auto; font-variant-numeric:tabular-nums; } .sp-head em { color:var(--warn); font-style:normal; font-weight:600; }
-  button.sp-head:hover { box-shadow:inset 0 0 0 1px var(--accent); }
-  button.sp-head[aria-expanded=false] { background:var(--card); border:1px solid var(--line); }
-  .sp-car { color:var(--accent); width:12px; }
   .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 16px; min-width:150px; text-align:left; box-shadow:var(--shadow); }
   .kpi b { display:block; font-size:22px; font-weight:650; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
   .kpi span { color:var(--muted); font-size:12px; }
@@ -144,6 +148,9 @@
   .us { padding-left:8px; font-size:13px; } .us a:hover { text-decoration:underline; }
   .row.ado [data-f=activity] { border-left:2px solid var(--accent); }
   .aw { color:var(--warn); padding:0 3px; font-size:14px; } .aw:hover { color:var(--bad); }
+  .push-day { font-size:12px; padding:2px 9px; border-radius:20px; border:1px solid var(--warn); color:var(--warn); }
+  .push-day:hover { background:var(--warn-soft); }
+  .sp-badge { font-size:11px; color:var(--accent); white-space:nowrap; }
   .moved { color:var(--accent); padding:0 3px; font-weight:700; cursor:help; }
   #movePick { position:fixed; width:1px; height:1px; opacity:0; border:0; padding:0; }
 
@@ -185,11 +192,11 @@
   dialog h3 { margin:0 0 6px; } dialog .sub { color:var(--muted); font-size:13px; margin:0 0 10px; }
   dialog input, dialog select { padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:inherit; font:inherit; min-width:0; }
   dialog input[type=radio] { padding:0; }
-  .dl-row { display:grid; grid-template-columns:1fr 140px 140px 30px; gap:6px; margin-bottom:6px; align-items:center; }
+  .dl-row { display:grid; grid-template-columns:1fr 140px 140px 52px 30px; gap:6px; margin-bottom:6px; align-items:center; }
   .dl-foot { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
   .seg { display:flex; gap:16px; margin:6px 0 12px; }
   .primary:disabled { opacity:.5; cursor:default; filter:none; }
-  @media (max-width: 600px) { .dl-row { grid-template-columns:1fr 1fr 30px; } .dl-row [data-k=name] { grid-column:1 / -1; } }
+  @media (max-width: 600px) { .dl-row { grid-template-columns:1fr 1fr 52px 30px; } .dl-row [data-k=name] { grid-column:1 / -1; } }
 
   /* RAS */
   .ras-wrap { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); }
@@ -350,7 +357,7 @@ const migrate = () => {
   for (const e of data.entries) if (!e.task && !e.absence) e.absence = LEGACY[e.activity.toLowerCase()];
   // cache di titoli e padri dei work item, e chiavi task@giorno già importate (per non reimportare righe cancellate a mano)
   data.ado ??= {items:{}, seen:[], syncedTo:null};
-  data.sprints ??= []; data.sprintDays ??= 14; // sprint: {name, start, end}, date incluse; nuovi sprint di 2 settimane salvo modifica
+  data.sprints ??= []; data.sprintDays ??= 14; data.sprintSkip ??= []; // sprintSkip: inizi degli sprint DevOps eliminati a mano // sprint: {name, start, end}, date incluse; nuovi sprint di 2 settimane salvo modifica
   data.ado.pushed ??= []; // ore caricate su DevOps da qui: {task, date del diario, at = giorno del caricamento, hours}
   // l'allattamento era un flag per giorno: diventa un'assenza ALL da 2 h, solo nei giorni con ore lavorate
   if (data.days) {
@@ -424,20 +431,44 @@ function kv(mode, fn) {
 async function load(h) {
   if (await h.requestPermission({mode:'readwrite'}) !== 'granted') return;
   const f = await h.getFile();
-  data = JSON.parse(await f.text()); handle = h; lastMod = f.lastModified; migrate();
+  data = migrated(JSON.parse(await f.text())); handle = h; lastMod = f.lastModified; base = JSON.stringify(data);
   await kv('readwrite', s => s.put(h, 'file'));
   $('gate').hidden = true; $('app').hidden = false;
   $('qDate').value = today();
   render(); scrollToDay(today(), false);
   adoStart();
 }
+// base = il file come l'ho letto o scritto l'ultima volta: confrontandolo con data so cosa ho cambiato io
+let base;
+// migrate() lavora su data: per migrare un file appena letto lo scambio un attimo
+function migrated(d) { const keep = data; data = d; migrate(); data = keep; return d; }
+// Unione a tre vie per riga (id): parto dal file su disco, ci riapplico righe aggiunte, modificate e cancellate
+// qui rispetto a base. Gli altri campi: vince il mio valore solo se l'ho cambiato io.
+function merge(b, local, disk) {
+  const byId = a => new Map(a.map(e => [e.id, e])), bm = byId(b.entries), lm = byId(local.entries), out = byId(disk.entries);
+  for (const [id, e] of lm) if (!bm.has(id) || JSON.stringify(bm.get(id)) !== JSON.stringify(e)) out.set(id, e);
+  for (const id of bm.keys()) if (!lm.has(id)) out.delete(id);
+  const res = {...disk, entries: [...out.values()].sort((x, y) => x.date.localeCompare(y.date))};
+  for (const k of Object.keys(local)) if (k !== 'entries' && k !== 'ado' && JSON.stringify(local[k]) !== JSON.stringify(b[k])) res[k] = local[k];
+  const uniq = a => [...new Map(a.map(x => [JSON.stringify(x), x])).values()];
+  res.ado = {...disk.ado, items: {...disk.ado.items, ...local.ado.items}, seen: uniq([...disk.ado.seen, ...local.ado.seen]),
+    pushed: uniq([...disk.ado.pushed, ...local.ado.pushed]), syncedTo: [disk.ado.syncedTo, local.ado.syncedTo].sort().pop(), me: local.ado.me ?? disk.ado.me};
+  return res;
+}
 function save() {
   setStatus('Salvataggio…', 'busy'); saving = true;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
-      const w = await handle.createWritable(); await w.write(JSON.stringify(data, null, 1)); await w.close();
-      lastMod = (await handle.getFile()).lastModified;
+      // il file può essere cambiato da un altro PC o da un'altra scheda: unisco invece di sovrascrivere
+      const f = await handle.getFile();
+      if (f.lastModified > lastMod) {
+        data = merge(JSON.parse(base), data, migrated(JSON.parse(await f.text())));
+        undoStack = []; reindex(); render(); toast('Il file era stato modificato altrove: ho unito le modifiche');
+      }
+      const json = JSON.stringify(data, null, 1);
+      const w = await handle.createWritable(); await w.write(json); await w.close();
+      lastMod = (await handle.getFile()).lastModified; base = JSON.stringify(data);
       setStatus('Salvato alle ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'}));
     } catch (err) { setStatus('Errore di salvataggio', 'err'); toast('Salvataggio non riuscito: ' + err.message); }
     saving = false;
@@ -455,7 +486,7 @@ kv('readonly', s => s.get('file')).then(async h => {
 document.addEventListener('visibilitychange', async () => {
   if (document.hidden || !handle || saving) return;
   const f = await handle.getFile();
-  if (f.lastModified > lastMod) { data = JSON.parse(await f.text()); lastMod = f.lastModified; migrate(); undoStack = []; render(); toast('Il file era cambiato: ricaricato'); }
+  if (f.lastModified > lastMod) { data = migrated(JSON.parse(await f.text())); lastMod = f.lastModified; base = JSON.stringify(data); undoStack = []; render(); toast('Il file era cambiato: ricaricato'); }
 });
 
 // ---------- modifiche con undo ----------
@@ -540,15 +571,23 @@ function toggleSprint(start, open = !spOpen.has(start)) {
   open ? spOpen.add(start) : spOpen.delete(start);
   try { localStorage.setItem('sprintOpen', JSON.stringify([...spOpen])); } catch {}
 }
+// pulsante "carica su DevOps" per le ore scoperte di un intervallo (giorno o sprint), vuoto se non ce ne sono
+function pushBtn(from, to) {
+  const h = unloggedIn(uMap, from, to).reduce((s, e) => s + uMap.get(e.id), 0);
+  return h ? `<button class="push-day" data-push-range="${from}|${to}" title="Carica su Azure DevOps le ore non ancora caricate">⚠ Carica ${fmt(h)} h</button>` : '';
+}
 function sprintHead(s) {
   const k = today(), past = s.end < k, open = !isCollapsed(s), {cap, reg, miss} = sprintStats(s);
   const state = past ? '' : s.start <= k ? '<span class="chip sprint">in corso</span>' : '<span class="chip">futuro</span>';
-  const inner = `<b>${esc(s.name)}</b><span>${shortDate(s.start)} – ${shortDate(s.end)}</span>${state}<span class="sp-sum">${fmt(reg) || 0} / ${cap} h${miss ? ` · <em>${miss} da compilare</em>` : ''}</span>`;
+  const title = `<b>${esc(s.name)}</b><span>${shortDate(s.start)} – ${shortDate(s.end)}</span>`;
   // solo i passati si comprimono: quello in corso e i futuri restano sempre aperti
-  return past ? `<button class="sp-head" data-sptoggle="${s.start}" aria-expanded="${open}" title="${open ? 'Comprimi' : 'Espandi'} lo sprint"><span class="sp-car">${open ? '▾' : '▸'}</span>${inner}</button>`
-    : `<div class="sp-head">${inner}</div>`;
+  return `<div class="sp-head${past && !open ? ' shut' : ''}">${past
+    ? `<button class="sp-tg" data-sptoggle="${s.start}" aria-expanded="${open}" title="${open ? 'Comprimi' : 'Espandi'} lo sprint"><span class="sp-car">${open ? '▾' : '▸'}</span>${title}</button>` : title}
+    ${state}<span class="sp-sum">${fmt(reg) || 0} / ${cap} h${miss ? ` · <em>${miss} da compilare</em>` : ''}</span>${pushBtn(s.start, s.end)}</div>`;
 }
+let uMap = new Map(); // ore scoperte per riga, ricalcolate a ogni disegno del diario
 function diary() {
+  uMap = unlogged();
   let h = '', weBuf = [], cur = null;
   const flush = () => { if (weBuf.length) h += `<div class="we-strip">${weBuf.join(' · ')}</div>`; weBuf = []; };
   for (const d of monthDays(...ym)) {
@@ -566,7 +605,7 @@ function dayCard(i) {
   let h = `<section class="${cls}" id="d-${i.k}" data-day="${i.k}"><div class="dhead">
     <div class="date"><span class="dnum">${i.d.getDate()}</span><span class="dname">${DOW[i.d.getDay()]}</span></div>
     ${sprintChip(i.k)}${i.hol ? `<span class="chip">${esc(i.hol)}</span>` : ''}${i.missing ? '<span class="chip warn">Da compilare</span>' : ''}
-    <div class="dmeta"><span class="tot" data-tot="${i.k}">${totHtml(i.tot)}</span>
+    <div class="dmeta">${pushBtn(i.k, i.k)}<span class="tot" data-tot="${i.k}">${totHtml(i.tot)}</span>
     ${i.we || i.hol ? '' : `<select class="abs-pick" data-abs="${i.k}" title="Aggiungi un'assenza a questo giorno"><option value="">＋ Assenza</option>${codeOpts()}</select>`}
     <button class="icon" data-add="${i.k}" title="Aggiungi attività a questo giorno">＋</button></div></div>`;
   if (i.es.length) h += i.es.map(row).join('');
@@ -679,6 +718,7 @@ function renderSprints() {
   $('spDays').value = data.sprintDays;
   $('spList').innerHTML = data.sprints.map((s, i) => [s, i]).reverse().map(([s, i]) => `<div class="dl-row" data-i="${i}">
     <input data-k="name" value="${esc(s.name)}" aria-label="Nome"><input type="date" data-k="start" value="${s.start}" aria-label="Inizio"><input type="date" data-k="end" value="${s.end}" min="${s.start}" aria-label="Fine">
+    <span class="sp-badge" title="${s.ado ? 'Preso dalle iterazioni di Azure DevOps: se lo modifichi diventa tuo e non viene più aggiornato' : 'Creato o modificato a mano'}">${s.ado ? 'DevOps' : 'a mano'}</span>
     <button type="button" class="icon danger" data-spdel="${i}" title="Elimina sprint">✕</button></div>`).join('') || '<div class="nodata">Nessuno sprint: aggiungine uno.</div>';
 }
 function openSprints() { renderSprints(); $('dlgSprint').showModal(); }
@@ -696,13 +736,16 @@ $('spList').addEventListener('change', ev => {
     if (t.dataset.k === 'start') { const len = (parseIso(s.end) - parseIso(s.start)) / 864e5; s.start = v; s.end = addDays(v, Math.round(len)); }
     else if (t.dataset.k === 'end') s.end = v < s.start ? s.start : v;
     else s.name = v;
+    delete s.ado; // modificato a mano: da qui in poi la sincronizzazione non lo tocca
     data.sprints.sort((a, b) => a.start.localeCompare(b.start));
   });
   renderSprints();
 });
 $('spList').addEventListener('click', ev => {
   const i = ev.target.closest('[data-spdel]')?.dataset.spdel; if (i == null) return;
-  const s = data.sprints[i]; mutate(() => data.sprints.splice(i, 1), `Eliminato “${s.name}”`); chartSprint = null; renderSprints();
+  const s = data.sprints[i];
+  mutate(() => { data.sprints.splice(i, 1); if (s.ado) data.sprintSkip.push(s.start); }, `Eliminato “${s.name}”`); // uno sprint DevOps eliminato non deve tornare
+  chartSprint = null; renderSprints();
 });
 $('dlgSprint').addEventListener('close', () => render());
 $('sprints').onclick = openSprints;
@@ -810,7 +853,8 @@ $('content').addEventListener('click', ev => {
   else if (ds.move) pickDay(ds.move, t);
   else if (ds.absent) addAbsence(ds.date, ds.absent);
   else if (ds.repeat) repeatPrevious(ds.repeat);
-  else if (ds.push) pushHours(ds.push);
+  else if (ds.push) pushMany([ds.push]);
+  else if (ds.pushRange) { const [from, to] = ds.pushRange.split('|'); pushMany(unloggedIn(unlogged(), from, to).map(e => e.id)); }
   else if ('sprints' in ds) openSprints();
   else if (ds.goto) scrollToDay(ds.goto, true, t.classList.contains('hit') ? ds.id : undefined);
 });
@@ -860,7 +904,8 @@ function commit(t, extra) {
   adoCells(r, e);
   if (isWi(e.task) && !wi(e.task)) ensureItems([e.task]).then(() => { adoCells(r, e); paintWarnings(); });
   const gap = paintWarnings().get(e.id);
-  if (gap && (f === 'hours' || f === 'task')) toast(`${fmt(gap)} h sul task ${e.task} non sono ancora su Azure DevOps`, false, {label:'Caricale', fn:() => pushHours(e.id)});
+  if ((f === 'hours' || f === 'task') && e.hours && isClosed(e.task)) toast(`Attenzione: il task ${e.task} è ${wi(e.task).state} su Azure DevOps`);
+  else if (gap && (f === 'hours' || f === 'task')) toast(`${fmt(gap)} h sul task ${e.task} non sono ancora su Azure DevOps`, false, {label:'Caricale', fn:() => pushMany([e.id])});
   r.querySelector('[data-f=commessa]').value = e.commessa ?? '';
   r.querySelector('[data-f=hours]').value = fmt(e.hours);
   r.querySelector('.pct').textContent = pct(e.hours);
@@ -979,7 +1024,7 @@ let pat = null, adoAuth = () => 'Basic ' + btoa(':' + pat);
 const isWi = t => /^\d+$/.test(t ?? '');
 const wi = id => data.ado.items[id];
 const wiUrl = id => `${ADO}/${ADO_PRJ}/_workitems/edit/${id}`;
-const wiTip = id => wi(id) ? `${wi(id).type} ${id} — ${wi(id).title}` : isWi(id) ? (pat ? 'Descrizione non disponibile su Azure DevOps' : 'Collega Azure DevOps (pulsante DevOps ⟳) per vedere descrizione e US') : '';
+const wiTip = id => wi(id) ? `${wi(id).type} ${id} — ${wi(id).title}${wi(id).state ? ` [${wi(id).state}]` : ''}` : isWi(id) ? (pat ? 'Descrizione non disponibile su Azure DevOps' : 'Collega Azure DevOps (pulsante DevOps ⟳) per vedere descrizione e US') : '';
 const wiLink = id => isWi(id) ? `<a href="${wiUrl(id)}" target="_blank" rel="noopener" title="${esc(wiTip(id) || 'Apri su Azure DevOps')}">↗</a>` : '';
 const usLink = id => { const p = isWi(id) && wi(id)?.parent; return p ? `<a class="mono" href="${wiUrl(p)}" target="_blank" rel="noopener" title="${esc(wiTip(p))}">${p}</a>` : ''; };
 const addDays = (k, n) => { const d = parseIso(k); d.setDate(d.getDate() + n); return iso(d); };
@@ -997,7 +1042,9 @@ async function adoFetch(path, body, method = body ? 'POST' : 'GET') {
   return r.json();
 }
 const CW = 'Microsoft.VSTS.Scheduling.CompletedWork', RW = 'Microsoft.VSTS.Scheduling.RemainingWork';
-const cacheItem = w => { const f = w.fields; data.ado.items[w.id] = {title:f['System.Title'], type:f['System.WorkItemType'], parent:f['System.Parent'] ?? null, completed:f[CW] ?? null, remaining:f[RW] ?? null, rev:w.rev}; };
+const cacheItem = w => { const f = w.fields; data.ado.items[w.id] = {title:f['System.Title'], type:f['System.WorkItemType'], parent:f['System.Parent'] ?? null, completed:f[CW] ?? null, remaining:f[RW] ?? null, rev:w.rev, state:f['System.State'], iter:f['System.IterationPath']}; };
+const CLOSED = /^(closed|done|removed|resolved)$/i;
+const isClosed = id => CLOSED.test(wi(id)?.state ?? '');
 function adoError(err) {
   if (err.auth) { pat = null; $('ado').classList.add('primary'); kv('readwrite', s => s.delete('pat')).catch(() => {}); }
   setStatus('DevOps: ' + err.message, 'err'); toast('Azure DevOps: ' + err.message);
@@ -1007,7 +1054,7 @@ async function fetchItems(ids, force) {
   const todo = [...new Set(ids.filter(isWi).map(String))].filter(id => force || !wi(id));
   let n = 0;
   for (let i = 0; i < todo.length; i += 200) {
-    const r = await adoFetch(`_apis/wit/workitems?ids=${todo.slice(i, i + 200).join(',')}&fields=System.Title,System.WorkItemType,System.Parent,${CW},${RW}&errorPolicy=omit`);
+    const r = await adoFetch(`_apis/wit/workitems?ids=${todo.slice(i, i + 200).join(',')}&fields=System.Title,System.WorkItemType,System.Parent,System.State,System.IterationPath,${CW},${RW}&errorPolicy=omit`);
     for (const w of r.value) if (w) { n++; cacheItem(w); }
   }
   const parents = todo.map(id => wi(id)?.parent).filter(p => p && !wi(p));
@@ -1096,27 +1143,77 @@ function paintWarnings() {
   }
   return u;
 }
-// aggiunge al Completed Work del task le ore scoperte di una riga e le scala dal Remaining Work, se c'è
-async function pushHours(id) {
-  const e = find(id);
+// righe con ore scoperte in un intervallo di date (per i pulsanti "carica" di giorno e sprint)
+const unloggedIn = (u, from, to) => data.entries.filter(e => e.date >= from && e.date <= to && u.has(e.id));
+// Aggiunge al Completed Work dei task le ore scoperte delle righe indicate e le scala dal Remaining Work, se c'è.
+// Una sola conferma per tutto, raggruppato per task; un task che fallisce non blocca gli altri.
+async function pushMany(ids) {
   if (!pat) return toast('Collega prima Azure DevOps (pulsante DevOps ⟳)');
   try {
-    await fetchItems([e.task], true); // valori freschi: in cache possono essere vecchi
-    const h = paintWarnings().get(id); if (!h) return toast('Queste ore risultano già su Azure DevOps');
-    const w = wi(e.task), done = w.completed ?? 0, rem = w.remaining, left = rem == null ? null : Math.max(0, +(rem - h).toFixed(2));
-    if (!confirm(`Carico su Azure DevOps ${fmt(h)} h del ${shortDate(e.date)}\nTask ${e.task} — ${w.title}\n\nCompleted Work: ${fmt(done)} → ${fmt(done + h)}` +
-      (rem == null ? '\nRemaining Work: non valorizzato, resta com\'è' : `\nRemaining Work: ${fmt(rem)} → ${fmt(left)}`))) return;
-    // test su /rev: se qualcuno ha modificato il task nel frattempo la PATCH fallisce invece di sovrascrivere
-    const ops = [{op:'test', path:'/rev', value:w.rev}, {op:'add', path:`/fields/${CW}`, value:+(done + h).toFixed(2)}];
-    if (rem != null) ops.push({op:'add', path:`/fields/${RW}`, value:left});
-    cacheItem(await adoFetch(`_apis/wit/workitems/${e.task}`, ops, 'PATCH'));
-    data.ado.pushed.push({task:e.task, date:e.date, at:today(), hours:h});
-    save(); paintWarnings(); toast(`Caricate ${fmt(h)} h sul task ${e.task}`);
+    const es = ids.map(find).filter(Boolean);
+    await fetchItems(es.map(e => e.task), true); // valori freschi: in cache possono essere vecchi
+    const u = unlogged(), per = new Map();
+    for (const e of es) { const h = u.get(e.id); if (!h) continue; const p = per.get(e.task) ?? {h:0, rows:[]}; p.h += h; p.rows.push({e, h}); per.set(e.task, p); }
+    if (!per.size) { render(); return toast('Queste ore risultano già su Azure DevOps'); }
+    const plan = [...per].map(([task, p]) => { const w = wi(task), done = w.completed ?? 0, rem = w.remaining, h = +p.h.toFixed(2);
+      return {task, w, h, done, rem, left: rem == null ? null : Math.max(0, +(rem - h).toFixed(2)), rows: p.rows}; });
+    const tot = plan.reduce((s, p) => s + p.h, 0), closed = plan.filter(p => isClosed(p.task)).length;
+    const lines = plan.map(p => `• ${p.task} — ${p.w.title}${isClosed(p.task) ? `  ⚠ ${p.w.state}` : ''}\n   +${fmt(p.h)} h · Completed ${fmt(p.done)} → ${fmt(p.done + p.h)}` +
+      (p.rem == null ? '' : ` · Remaining ${fmt(p.rem)} → ${fmt(p.left)}`));
+    if (!confirm(`Carico su Azure DevOps ${fmt(tot)} h su ${plan.length} task:\n\n${lines.join('\n')}` +
+      (closed ? `\n\nAttenzione: ${closed} task risultano chiusi.` : ''))) return;
+    let ok = 0;
+    for (const p of plan) {
+      // test su /rev: se qualcuno ha modificato il task nel frattempo la PATCH fallisce invece di sovrascrivere
+      const ops = [{op:'test', path:'/rev', value:p.w.rev}, {op:'add', path:`/fields/${CW}`, value:+(p.done + p.h).toFixed(2)}];
+      if (p.rem != null) ops.push({op:'add', path:`/fields/${RW}`, value:p.left});
+      try {
+        cacheItem(await adoFetch(`_apis/wit/workitems/${p.task}`, ops, 'PATCH'));
+        for (const {e, h} of p.rows) data.ado.pushed.push({task:p.task, date:e.date, at:today(), hours:h});
+        ok++;
+      } catch (err) { if (err.auth) throw err; toast(`Task ${p.task}: ${err.message}`); }
+    }
+    save(); render();
+    if (ok) toast(ok === plan.length ? `Caricate ${fmt(tot)} h su ${ok} task` : `Caricati ${ok} task su ${plan.length}: gli altri hanno dato errore`);
   } catch (err) { adoError(err); }
 }
-// a ogni apertura: ore e titoli aggiornati di tutti i task del diario, poi import delle ore nuove
+// Sprint dalle iterazioni di Azure DevOps: solo le release in cui ho task con ore; per ogni finestra di date
+// il nome è lo sprint su cui ho più ore (a pari merito, la release dove ne ho di più). Gli sprint fatti o
+// modificati a mano vincono: DevOps riempie solo i periodi scoperti. Ritorna true se l'elenco è cambiato.
+async function adoSprints() {
+  const root = await adoFetch(`${ADO_PRJ}/_apis/wit/classificationnodes/Iterations?$depth=6`);
+  const hours = {}, relHours = {}, rel = p => p.split('\\').slice(0, -1).join('\\');
+  for (const e of data.entries) {
+    const it = isWi(e.task) && wi(e.task)?.iter;
+    if (it && +e.hours) { hours[it] = (hours[it] ?? 0) + +e.hours; relHours[rel(it)] = (relHours[rel(it)] ?? 0) + +e.hours; }
+  }
+  const wins = [];
+  (function walk(n, path) {
+    for (const c of n.children ?? []) {
+      const p = `${path}\\${c.name}`, a = c.attributes ?? {};
+      if (c.children?.length) { walk(c, p); continue; }
+      if (!a.startDate || !a.finishDate || !relHours[path]) continue;
+      const start = a.startDate.slice(0, 10), end = a.finishDate.slice(0, 10);
+      if ((parseIso(end) - parseIso(start)) / 864e5 > 28) continue; // contenitori lunghi, non sprint
+      wins.push({name:c.name, start, end, score:(hours[p] ?? 0) * 1e6 + relHours[path]});
+    }
+  })(root, root.name);
+  const first = data.entries[0]?.date ?? today(), limit = addDays(today(), 60), skip = new Set(data.sprintSkip);
+  const overlap = (a, b) => a.start <= b.end && b.start <= a.end, picked = [];
+  for (const w of wins.sort((a, b) => b.score - a.score))
+    if (w.end >= first && w.start <= limit && !skip.has(w.start) && !picked.some(p => overlap(p, w))) picked.push(w);
+  const manual = data.sprints.filter(s => !s.ado);
+  const next = [...manual, ...picked.filter(w => !manual.some(m => overlap(m, w))).map(({name, start, end}) => ({name, start, end, ado:true}))]
+    .sort((a, b) => a.start.localeCompare(b.start));
+  if (JSON.stringify(next) === JSON.stringify(data.sprints)) return false;
+  data.sprints = next; return true;
+}
+// a ogni apertura: ore, titoli e stato aggiornati di tutti i task del diario, sprint, poi import delle ore nuove
 async function adoRefresh() {
-  try { await fetchItems(data.entries.map(e => e.task), true); } catch (err) { return adoError(err); }
+  try {
+    await fetchItems(data.entries.map(e => e.task), true);
+    if (await adoSprints()) render();
+  } catch (err) { return adoError(err); }
   await adoSync();
 }
 async function askPat() {
