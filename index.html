@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riepilogo attività</title>
+<style>
+  :root {
+    --bg:#f5f6f8; --card:#fff; --fg:#17181c; --muted:#6b7280; --faint:#9ca3af; --line:#e5e7eb; --hover:#f3f4f6;
+    --accent:#4f46e5; --accent-soft:#eef0ff; --warn:#b45309; --warn-soft:#fff7ed; --bad:#dc2626; --ok:#059669; --we:#fafafb;
+    --cols: 20px minmax(220px,1fr) 142px 62px 64px 46px 150px minmax(140px,.8fr) 94px;
+    --shadow: 0 1px 2px rgba(16,24,40,.05);
+    --s1:#2a78d6; --s2:#eb6834;
+  }
+  @media (prefers-color-scheme: dark) { :root {
+    --bg:#111215; --card:#1a1b20; --fg:#e9eaee; --muted:#9096a3; --faint:#646a76; --line:#2a2c33; --hover:#23252c;
+    --accent:#8b8cf8; --accent-soft:#25264a; --warn:#f0b45a; --warn-soft:#2e2414; --bad:#f87171; --ok:#34d399; --we:#16171b;
+    --shadow:none; --s1:#3987e5; --s2:#d95926; } }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  html { color-scheme:light dark; }
+  /* margine solo su giorni e righe: su html farebbe scrollare a ogni tasto i campi della barra sticky */
+  .day, .row, .row input { scroll-margin-top:170px; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif; -webkit-font-smoothing:antialiased; }
+  .mono { font-family:"Cascadia Mono",Consolas,ui-monospace,monospace; font-size:13px; }
+  button { font:inherit; color:inherit; background:none; border:0; cursor:pointer; border-radius:8px; }
+  button:focus-visible, input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+
+  /* top bar */
+  .top { position:sticky; top:0; z-index:20; height:56px; display:flex; align-items:center; gap:10px; padding:0 20px; background:var(--card); border-bottom:1px solid var(--line); }
+  .brand { font-weight:700; letter-spacing:-.01em; margin-right:12px; }
+  .nav { display:flex; align-items:center; gap:2px; }
+  .nav h1 { font-size:17px; font-weight:600; margin:0 6px; min-width:150px; text-align:center; text-transform:capitalize; }
+  .icon { width:30px; height:30px; display:inline-grid; place-items:center; color:var(--muted); }
+  .icon:hover { background:var(--hover); color:var(--fg); }
+  .btn { padding:6px 12px; border:1px solid var(--line); background:var(--card); }
+  .btn:hover { background:var(--hover); }
+  .tabs { display:flex; background:var(--hover); padding:3px; border-radius:10px; margin-left:8px; }
+  .tabs button { padding:5px 14px; color:var(--muted); font-weight:500; }
+  .tabs button.on { background:var(--card); color:var(--fg); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+  .search { margin-left:auto; position:relative; }
+  .search input { width:240px; padding:7px 10px 7px 30px; border:1px solid var(--line); border-radius:9px; background:var(--bg); color:inherit; font:inherit; }
+  .search::before { content:"⌕"; position:absolute; left:10px; top:50%; transform:translateY(-52%); color:var(--faint); font-size:16px; }
+  #status { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; min-width:130px; justify-content:flex-end; }
+  #status::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--ok); }
+  #status.busy::before { background:var(--warn); } #status.err { color:var(--bad); } #status.err::before { background:var(--bad); }
+
+  /* layout */
+  .layout { display:grid; grid-template-columns:210px minmax(0,1fr); align-items:start; }
+  aside { position:sticky; top:56px; height:calc(100vh - 56px); overflow:auto; padding:16px 10px; border-right:1px solid var(--line); }
+  .year { display:flex; align-items:center; justify-content:space-between; font-weight:600; padding:0 4px 10px; }
+  .mon { width:100%; display:flex; align-items:center; gap:8px; padding:7px 10px; margin-bottom:1px; text-align:left; }
+  .mon:hover { background:var(--hover); } .mon.on { background:var(--accent-soft); color:var(--accent); font-weight:600; }
+  .mon .mh { margin-left:auto; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .badge { min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:var(--warn-soft); color:var(--warn); font-size:11px; font-weight:700; display:inline-grid; place-items:center; }
+  main { padding:16px 24px 80px; min-width:0; }
+
+  .hero { display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; margin-bottom:14px; }
+  .hero-who { display:flex; flex-direction:column; justify-content:center; min-width:220px; }
+  .hero-name { font-size:24px; font-weight:650; letter-spacing:-.02em; padding:0; text-align:left; }
+  .hero-name:hover { color:var(--accent); }
+  .hero-who .hs-meta::first-letter { text-transform:uppercase; }
+  .hero-sp { flex:1; min-width:280px; display:flex; flex-direction:column; gap:4px; background:var(--card); border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:12px; padding:10px 16px; text-align:left; box-shadow:var(--shadow); }
+  button.hero-sp:hover { border-color:var(--accent); }
+  .hero-sp.none { justify-content:center; color:var(--muted); border-left-color:var(--line); }
+  .hs-top { display:flex; align-items:baseline; gap:12px; } .hs-top b { font-size:17px; } .hs-top span { color:var(--muted); font-size:13px; }
+  .hs-meta { color:var(--muted); font-size:12px; } .hs-meta b { color:var(--fg); }
+  .hs-bar { width:100%; height:8px; position:relative; overflow:visible; }
+  .hs-bar u { position:absolute; top:-3px; width:2px; height:14px; background:var(--fg); opacity:.5; transform:translateX(-1px); }
+  .link { color:var(--accent); padding:0; text-decoration:underline; }
+  .kpis { display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 16px; min-width:150px; text-align:left; box-shadow:var(--shadow); }
+  .kpi b { display:block; font-size:22px; font-weight:650; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+  .kpi span { color:var(--muted); font-size:12px; }
+  .kpi.warn { border-color:var(--warn); background:var(--warn-soft); } .kpi.warn b { color:var(--warn); }
+  button.kpi:hover { border-color:var(--accent); }
+
+  /* quick add + column header, sticky */
+  .sticky { position:sticky; top:56px; z-index:10; background:var(--bg); padding:4px 0 6px; margin:0 -4px; }
+  .quick { display:grid; grid-template-columns:150px minmax(220px,1fr) 92px 70px 150px minmax(120px,.7fr) auto; gap:6px; padding:8px; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); margin:0 4px; }
+  .quick input { padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:inherit; font:inherit; min-width:0; }
+  .quick input:focus { border-color:var(--accent); background:var(--card); outline:none; box-shadow:0 0 0 3px var(--accent-soft); }
+  .primary { background:var(--accent); color:#fff; padding:8px 16px; font-weight:600; }
+  .primary:hover { filter:brightness(1.08); }
+  .colhead { display:grid; grid-template-columns:var(--cols); gap:4px; padding:8px 15px 0; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--faint); }
+  .colhead span { padding-left:9px; }
+
+  /* day cards */
+  .day { background:var(--card); border:1px solid var(--line); border-radius:12px; margin:0 0 8px; padding:4px 10px 6px; box-shadow:var(--shadow); }
+  .day.today { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .day.missing { border-style:dashed; border-color:var(--warn); background:var(--warn-soft); }
+  .day.holiday { background:transparent; box-shadow:none; }
+  .day.weekend { background:var(--we); }
+  .day.drop { border-color:var(--accent); background:var(--accent-soft); }
+  .dhead { display:flex; align-items:center; gap:10px; padding:4px 2px; min-height:38px; }
+  .date { display:flex; align-items:baseline; gap:8px; width:96px; }
+  .dnum { font-size:20px; font-weight:650; font-variant-numeric:tabular-nums; width:26px; text-align:right; }
+  .dname { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .today .dnum, .today .dname { color:var(--accent); }
+  .chip { font-size:12px; padding:2px 9px; border-radius:20px; background:var(--hover); color:var(--muted); white-space:nowrap; }
+  .chip.warn { background:transparent; color:var(--warn); border:1px solid var(--warn); }
+  .chip.sprint { background:var(--accent-soft); color:var(--accent); }
+  .chip.sprint.first { background:var(--accent); color:#fff; font-weight:600; }
+  .dmeta { margin-left:auto; display:flex; align-items:center; gap:10px; }
+  .tot { display:flex; align-items:center; gap:8px; font-variant-numeric:tabular-nums; font-weight:600; font-size:13px; }
+  .bar { width:80px; height:6px; border-radius:3px; background:var(--hover); overflow:hidden; }
+  .bar i { display:block; height:100%; background:var(--accent); border-radius:3px; }
+  .bar.full i { background:var(--ok); } .bar.over i { background:var(--warn); }
+  .empty { display:flex; gap:6px; flex-wrap:wrap; padding:2px 0 6px 106px; }
+  .ghost { padding:4px 10px; border:1px dashed var(--line); color:var(--muted); font-size:13px; }
+  .ghost:hover { border-style:solid; border-color:var(--accent); color:var(--accent); background:var(--card); }
+  .we-strip { display:flex; align-items:center; gap:10px; margin:2px 0 10px; color:var(--faint); font-size:12px; }
+  .we-strip::before, .we-strip::after { content:""; flex:1; height:1px; background:var(--line); }
+
+  /* rows */
+  .row { display:grid; grid-template-columns:var(--cols); gap:4px; align-items:center; border-radius:8px; }
+  .row:hover, .row:focus-within { background:var(--hover); }
+  .row.absence input[data-f=activity] { color:var(--muted); font-style:italic; }
+  .row.flash { animation:flash 1.2s ease-out; }
+  @keyframes flash { from { background:var(--accent-soft); } }
+  .row.dragging { opacity:.4; }
+  .row input { width:100%; min-width:0; padding:6px 8px; border:1px solid transparent; border-radius:6px; background:transparent; color:inherit; font:inherit; text-overflow:ellipsis; }
+  .row input:hover { border-color:var(--line); }
+  .row input:focus { border-color:var(--accent); background:var(--card); outline:none; box-shadow:0 0 0 3px var(--accent-soft); }
+  .row input::placeholder { color:var(--faint); }
+  .row input.bad { border-color:var(--bad); }
+  .row [data-f=hours] { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+  .pct { text-align:right; color:var(--faint); font-size:12px; font-variant-numeric:tabular-nums; }
+  .grip { cursor:grab; color:var(--faint); text-align:center; opacity:0; user-select:none; }
+  .acts { display:flex; opacity:0; }
+  .row:hover .grip, .row:hover .acts, .row:focus-within .acts { opacity:1; }
+  .icon.danger:hover { color:var(--bad); }
+
+  /* Azure DevOps */
+  .tk { display:flex; align-items:center; min-width:0; }
+  .tk a, .us a { color:var(--accent); text-decoration:none; }
+  .tk a { padding:0 4px; opacity:.6; } .tk a:hover { opacity:1; }
+  .us { padding-left:8px; font-size:13px; } .us a:hover { text-decoration:underline; }
+  .row.ado [data-f=activity] { border-left:2px solid var(--accent); }
+  .aw { color:var(--warn); padding:0 3px; font-size:14px; } .aw:hover { color:var(--bad); }
+  .moved { color:var(--accent); padding:0 3px; font-weight:700; cursor:help; }
+  #movePick { position:fixed; width:1px; height:1px; opacity:0; border:0; padding:0; }
+
+  /* assenze */
+  select { font:inherit; color:inherit; }
+  .abs-pick { padding:3px 6px; border:1px dashed var(--line); border-radius:8px; background:transparent; color:var(--muted); font-size:13px; max-width:140px; }
+  .abs-pick:hover, .abs-pick:focus { border-style:solid; border-color:var(--accent); color:var(--accent); outline:none; }
+  .row select[data-f=absence] { width:100%; min-width:0; padding:5px 4px; border:1px solid transparent; border-radius:6px; background:var(--warn-soft); color:var(--warn); font-weight:600; }
+  .row select[data-f=absence]:hover, .row select[data-f=absence]:focus { border-color:var(--accent); outline:none; }
+
+  /* grafici */
+  .charts { display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:12px; }
+  .chart { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; box-shadow:var(--shadow); min-width:0; }
+  .chart.wide { grid-column:1 / -1; }
+  .chart h3 { margin:0 0 2px; font-size:14px; font-weight:600; } .chart .sub { color:var(--muted); font-size:12px; margin-bottom:12px; }
+  .legend { display:flex; gap:14px; font-size:12px; color:var(--muted); margin-bottom:8px; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
+  .s1 { background:var(--s1); } .s2 { background:var(--s2); }
+  .cols { display:flex; gap:8px; height:200px; align-items:stretch; border-bottom:1px solid var(--line); }
+  .col { flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; cursor:default; border-radius:6px; }
+  .col:hover { background:var(--hover); } .col.on .cl { color:var(--accent); font-weight:600; }
+  .col .stack { width:min(28px, 70%); display:flex; flex-direction:column; gap:2px; }
+  .col .stack i { display:block; } .col .stack i:first-child { border-radius:4px 4px 0 0; }
+  .col .ct { font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; margin-bottom:3px; }
+  .clbls { display:flex; gap:8px; } .clbls span { flex:1; text-align:center; font-size:11px; color:var(--muted); padding-top:4px; }
+  .clbls span.on { color:var(--accent); font-weight:600; }
+  .hb { display:grid; grid-template-columns:minmax(0, 1.3fr) minmax(60px, 1fr) 64px; gap:10px; align-items:center; padding:4px 0; font-size:13px; }
+  .hb:hover { background:var(--hover); border-radius:6px; }
+  .hb .hl { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hb .ht i { display:block; height:10px; min-width:2px; background:var(--s1); border-radius:0 4px 4px 0; }
+  .hb b { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+  .nodata { color:var(--muted); font-size:13px; padding:8px 0; }
+  .chart-sel { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+  .chart-sel select { padding:7px 10px; border:1px solid var(--line); border-radius:9px; background:var(--card); max-width:100%; }
+
+  /* dialoghi sprint ed export */
+  dialog { border:1px solid var(--line); border-radius:14px; background:var(--card); color:var(--fg); padding:20px 22px; width:min(600px, calc(100vw - 32px)); box-shadow:0 20px 50px rgba(0,0,0,.25); }
+  dialog::backdrop { background:rgba(0,0,0,.35); }
+  dialog h3 { margin:0 0 6px; } dialog .sub { color:var(--muted); font-size:13px; margin:0 0 10px; }
+  dialog input, dialog select { padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:inherit; font:inherit; min-width:0; }
+  dialog input[type=radio] { padding:0; }
+  .dl-row { display:grid; grid-template-columns:1fr 140px 140px 30px; gap:6px; margin-bottom:6px; align-items:center; }
+  .dl-foot { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+  .seg { display:flex; gap:16px; margin:6px 0 12px; }
+  .primary:disabled { opacity:.5; cursor:default; filter:none; }
+  @media (max-width: 600px) { .dl-row { grid-template-columns:1fr 1fr 30px; } .dl-row [data-k=name] { grid-column:1 / -1; } }
+
+  /* RAS */
+  .ras-wrap { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); }
+  .ras { border-collapse:separate; border-spacing:0; width:100%; font-variant-numeric:tabular-nums; }
+  .ras th, .ras td { padding:7px 4px; text-align:center; border-bottom:1px solid var(--line); min-width:34px; }
+  .ras th { font-size:11px; font-weight:600; color:var(--muted); line-height:1.2; }
+  .ras th b { display:block; font-size:14px; color:var(--fg); }
+  .ras .lbl { position:sticky; left:0; z-index:1; background:var(--card); text-align:left; min-width:300px; max-width:380px; padding:7px 12px; border-right:1px solid var(--line); }
+  .ras .lbl .desc { display:block; font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ras .we { background:var(--we); color:var(--faint); } .ras .hol { background:var(--hover); }
+  .ras .wk { border-left:1px solid var(--line); }
+  .ras .today { box-shadow:inset 0 2px 0 var(--accent); }
+  .ras td.v { cursor:pointer; font-weight:600; } .ras td.v:hover { background:var(--accent-soft); color:var(--accent); }
+  .ras td.abs { color:var(--muted); font-weight:400; }
+  .ras .sum { font-weight:700; border-left:1px solid var(--line); padding:7px 10px; }
+  .ras tfoot td { border-bottom:0; font-weight:700; background:var(--hover); }
+  .ras tfoot .lbl { background:var(--hover); }
+  .ras tfoot .miss { color:var(--warn); } .ras tfoot .over { color:var(--bad); }
+
+  /* search */
+  .hits-head { color:var(--muted); margin:4px 0 12px; } .hits-head b { color:var(--fg); }
+  .hit { display:grid; grid-template-columns:120px 1fr 92px 60px; gap:10px; padding:8px 12px; border-radius:8px; cursor:pointer; align-items:center; }
+  .hit:hover { background:var(--card); }
+  .hit .hd { color:var(--muted); font-size:13px; } .hit .hh { text-align:right; font-weight:600; }
+  mark { background:var(--accent-soft); color:var(--accent); border-radius:3px; padding:0 1px; }
+
+  /* autocomplete */
+  .ac { position:fixed; z-index:50; background:var(--card); border:1px solid var(--line); border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.18); padding:4px; max-height:320px; overflow:auto; }
+  .opt { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:7px; cursor:pointer; }
+  .opt.sel { background:var(--accent-soft); }
+  .opt .oa { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .opt .od { font-size:12px; color:var(--faint); }
+
+  /* toast, gate */
+  #toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px); opacity:0; pointer-events:none; transition:.2s; background:#1f2937; color:#fff; padding:10px 16px; border-radius:10px; display:flex; gap:14px; align-items:center; box-shadow:0 10px 30px rgba(0,0,0,.25); z-index:60; }
+  #toast.show { opacity:1; transform:translateX(-50%); pointer-events:auto; }
+  #toast button { color:#a5b4fc; font-weight:600; }
+  .gate { min-height:100vh; display:grid; place-items:center; padding:16px; }
+  .gate .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:32px; max-width:440px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.08); }
+  .gate h2 { margin:0 0 8px; } .gate p { color:var(--muted); margin:0 0 20px; }
+  .gate .primary { width:100%; margin-bottom:8px; padding:10px; }
+  kbd { font:11px "Cascadia Mono",Consolas,monospace; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:0 4px; color:var(--muted); }
+  .help { margin-top:24px; font-size:12px; color:var(--faint); display:flex; gap:16px; flex-wrap:wrap; }
+
+  @media (max-width: 1000px) {
+    .layout { grid-template-columns:1fr; } aside { display:none; }
+    :root { --cols: 20px minmax(160px,1fr) 110px 58px 56px 40px 0 0 94px; }
+    .row [data-f=commessa], .row [data-f=note], .colhead span:nth-child(7), .colhead span:nth-child(8) { display:none; }
+    .quick { grid-template-columns:1fr 1fr; } .search input { width:150px; } .brand, #status { display:none; }
+  }
+  @media print {
+    .top, aside, .sticky, .acts, .grip, .empty, .kpis button { display:none !important; }
+    body { background:#fff; } .layout { display:block; } .day, .ras-wrap { box-shadow:none; break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="card">
+    <h2>Riepilogo attività</h2>
+    <p>I dati stanno in <b>attivita.json</b>, nella tua cartella OneDrive: la pagina lo legge e lo salva lì, non li invia altrove.</p>
+    <button class="primary" id="reopen" hidden>Riapri attivita.json</button>
+    <button class="btn" id="open" style="width:100%;padding:10px">Scegli il file…</button>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header class="top">
+    <span class="brand">Attività</span>
+    <div class="nav">
+      <button class="icon" id="prev" title="Mese precedente (Alt+←)">‹</button>
+      <h1 id="month"></h1>
+      <button class="icon" id="next" title="Mese successivo (Alt+→)">›</button>
+      <button class="btn" id="today" style="margin-left:6px">Oggi</button>
+    </div>
+    <div class="tabs"><button id="vDiary" class="on">Diario</button><button id="vRas">Vista RAS</button><button id="vCharts">Grafici</button></div>
+    <button class="btn" id="sprints" title="Definisci gli sprint">Sprint</button>
+    <button class="btn" id="export" title="Esporta per settimana, mese o sprint">Esporta</button>
+    <button class="btn" id="ado"title="Importa le ore da Azure DevOps (Maiusc+clic per cambiare il PAT)">DevOps ⟳</button>
+    <label class="search"><input id="q" type="search" placeholder="Cerca attività, task, note…  ( / )"></label>
+    <span id="status">Pronto</span>
+  </header>
+  <div class="layout">
+    <aside id="side"></aside>
+    <main>
+      <div class="hero" id="hero"></div>
+      <div class="kpis" id="kpis"></div>
+      <div class="sticky">
+        <form class="quick" id="quick" autocomplete="off">
+          <input type="date" id="qDate" required title="Giorno">
+          <input id="qAct" data-ac placeholder="Cosa hai fatto?" required>
+          <input id="qTask" class="mono" placeholder="Task">
+          <input id="qH" inputmode="decimal" placeholder="Ore">
+          <input id="qCom" placeholder="Commessa">
+          <input id="qNote" placeholder="Note">
+          <button class="primary">Aggiungi ↵</button>
+        </form>
+        <div class="colhead" id="colhead"><span></span><span>Attività</span><span>Task</span><span>US</span><span style="text-align:right">Ore</span><span style="text-align:right">%</span><span>Commessa</span><span>Note</span><span></span></div>
+      </div>
+      <div id="content"></div>
+      <div class="help">
+        <span><kbd>N</kbd> nuova attività</span><span><kbd>↑</kbd><kbd>↓</kbd> <kbd>↵</kbd> muoviti tra le righe</span>
+        <span><kbd>Ctrl</kbd>+<kbd>D</kbd> duplica riga</span><span><kbd>Ctrl</kbd>+<kbd>Z</kbd> annulla</span>
+        <span><kbd>Alt</kbd>+<kbd>←</kbd><kbd>→</kbd> cambia mese</span><span>trascina <b>⠿</b> per spostare su un altro giorno</span>
+      </div>
+    </main>
+  </div>
+</div>
+<div class="ac" id="ac" hidden></div>
+<input type="date" id="movePick" tabindex="-1" aria-hidden="true">
+<dialog id="dlgSprint"><form method="dialog">
+  <h3>Sprint</h3>
+  <p class="sub">Un nuovo sprint parte il giorno dopo la fine del precedente. Nome e date si possono cambiare: spostando l'inizio, la durata resta uguale.</p>
+  <label class="sub">Durata di un nuovo sprint <input type="number" id="spDays" min="1" max="90" style="width:70px"> giorni</label>
+  <div id="spList" style="margin-top:12px"></div>
+  <div class="dl-foot"><button class="btn" type="button" id="spAdd">＋ Nuovo sprint</button><button class="primary" value="ok">Chiudi</button></div>
+</form></dialog>
+<dialog id="dlgExport"><form method="dialog" id="fExport">
+  <h3>Esporta</h3>
+  <div class="seg"><label><input type="radio" name="per" value="week" checked> Settimana</label><label><input type="radio" name="per" value="month"> Mese</label><label><input type="radio" name="per" value="sprint"> Sprint</label></div>
+  <input type="date" id="exWeek" title="Un giorno qualsiasi della settimana"><input type="month" id="exMonth"><select id="exSprint"></select>
+  <p class="sub" id="exInfo"></p>
+  <div class="dl-foot"><button class="btn" value="cancel">Annulla</button><button class="primary" value="ok" id="exGo">Scarica CSV</button></div>
+</form></dialog>
+<div id="toast"><span id="toastMsg"></span><button id="toastUndo">Annulla</button></div>
+
+<script>
+const H = 8;
+const DOW = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+const MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+let data, handle, lastMod = 0, view = 'diary', query = '', undoStack = [], saveTimer, saving = false, byDate, sugg;
+let ym = [new Date().getFullYear(), new Date().getMonth()];
+
+// codici di assenza: provvisori, da sostituire con l'elenco ufficiale
+const CODES = [
+  {code:'FER', causale:'Ferie'},
+  {code:'PER', causale:'Permesso retribuito (ROL)'},
+  {code:'PST', causale:'Permesso studio'},
+  {code:'MAL', causale:'Malattia'},
+  {code:'CPG', causale:'Congedo parentale giornaliero'},
+  {code:'CPO', causale:'Congedo parentale orario'},
+  {code:'L104', causale:'Permesso L. 104'},
+  {code:'DON', causale:'Donazione sangue'},
+  {code:'ASS', causale:'Assemblea / riunione sindacale'},
+  {code:'LUT', causale:'Permesso lutto'},
+  {code:'MAT', causale:'Congedo matrimoniale'},
+  {code:'CHI', causale:'Chiusura aziendale'},
+  {code:'FES', causale:'Festività / patrono'},
+  {code:'ALL', causale:'Permesso allattamento'},
+];
+const CODE = Object.fromEntries(CODES.map(c => [c.code, c]));
+const codeOpts = sel => CODES.map(c => `<option value="${c.code}"${c.code === sel ? ' selected' : ''}>${c.code} · ${esc(c.causale)}</option>`).join('');
+// righe inserite prima dei codici: le riconosco dal testo dell'attività
+const LEGACY = {'ferie':'FER', 'permesso':'PER', 'permesso studio':'PST', 'congedo parentale':'CPO', 'congedo parentale orario':'CPO', 'congedo parentale giornaliero':'CPG',
+  'donazione sangue':'DON', 'riunione sindacale':'ASS', 'chiusura aziendale':'CHI', 'festività':'FES', 'patrono mosciano':'FES'};
+const migrate = () => {
+  for (const e of data.entries) if (!e.task && !e.absence) e.absence = LEGACY[e.activity.toLowerCase()];
+  // cache di titoli e padri dei work item, e chiavi task@giorno già importate (per non reimportare righe cancellate a mano)
+  data.ado ??= {items:{}, seen:[], syncedTo:null};
+  data.sprints ??= []; data.sprintDays ??= 14; // sprint: {name, start, end}, date incluse; nuovi sprint di 2 settimane salvo modifica
+  data.ado.pushed ??= []; // ore caricate su DevOps da qui: {task, date del diario, at = giorno del caricamento, hours}
+  // l'allattamento era un flag per giorno: diventa un'assenza ALL da 2 h, solo nei giorni con ore lavorate
+  if (data.days) {
+    for (const [k, v] of Object.entries(data.days))
+      if (v.allattamento && data.entries.some(e => e.date === k && !e.absence && +e.hours > 0) && !data.entries.some(e => e.date === k && e.absence === 'ALL'))
+        insert(newEntry(k, {activity: CODE.ALL.causale, absence: 'ALL', hours: 2}));
+    delete data.days;
+  }
+};
+
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const parseIso = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const today = () => iso(new Date());
+const fmt = n => n == null ? '' : String(+(+n).toFixed(2)).replace('.', ',');
+const pct = h => h ? String(+(h / H).toFixed(4)).replace('.', ',') : '';
+// "2,5" e "2.5" valgono uguale; undefined = input non valido
+const parseHours = v => { v = String(v).trim().replace(',', '.'); if (!v) return null; const n = Number(v); return Number.isFinite(n) && n >= 0 && n <= 24 ? n : undefined; };
+const monthDays = (y, m) => Array.from({length: new Date(y, m+1, 0).getDate()}, (_, i) => new Date(y, m, i+1));
+const shortDate = k => { const d = parseIso(k); return `${DOW[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3).toLowerCase()}`; };
+
+// festività nazionali, Pasquetta compresa (Meeus/Jones/Butcher)
+const holCache = {};
+function holidays(y) {
+  if (holCache[y]) return holCache[y];
+  const h = {}, fixed = {'01-01':'Capodanno','01-06':'Epifania','04-25':'Liberazione','05-01':'Festa del lavoro','06-02':'Festa della Repubblica','08-15':'Ferragosto','11-01':'Ognissanti','12-08':'Immacolata','12-25':'Natale','12-26':'Santo Stefano'};
+  for (const k in fixed) h[`${y}-${k}`] = fixed[k];
+  const a = y % 19, b = Math.floor(y/100), c = y % 100, d = Math.floor(b/4), e = b % 4, f = Math.floor((b+8)/25), g = Math.floor((b-f+1)/3),
+        hh = (19*a+b-d-g+15) % 30, i = Math.floor(c/4), k = c % 4, l = (32+2*e+2*i-hh-k) % 7, m = Math.floor((a+11*hh+22*l)/451),
+        mon = Math.floor((hh+l-7*m+114)/31), day = (hh+l-7*m+114) % 31 + 1;
+  h[iso(new Date(y, mon-1, day+1))] = 'Pasquetta';
+  return holCache[y] = h;
+}
+
+function reindex() {
+  byDate = new Map();
+  for (const e of data.entries) (byDate.get(e.date) ?? byDate.set(e.date, []).get(e.date)).push(e);
+  const m = new Map();
+  for (const e of data.entries) {
+    if (e.absence) continue; // le assenze si inseriscono dalla combo, non dall'autocompletamento
+    const s = m.get(e.activity) ?? {activity:e.activity, task:null, commessa:null, last:'', n:0};
+    s.n++; if (e.date >= s.last) { s.last = e.date; s.task = e.task ?? s.task; s.commessa = e.commessa ?? s.commessa; }
+    m.set(e.activity, s);
+  }
+  sugg = [...m.values()].sort((a, b) => b.last.localeCompare(a.last) || b.n - a.n);
+}
+function dayInfo(d) {
+  const k = iso(d), es = byDate.get(k) ?? [], we = d.getDay() % 6 === 0, hol = holidays(d.getFullYear())[k];
+  return {k, d, es, we, hol, tot: es.reduce((s, e) => s + (+e.hours || 0), 0), missing: !we && !hol && !es.length && k < today()};
+}
+function monthStats(y, m) {
+  const s = {hours:0, work:0, done:0, missing:0, first:null};
+  for (const d of monthDays(y, m)) {
+    const i = dayInfo(d); s.hours += i.tot;
+    if (!i.we && !i.hol) { s.work++; if (i.es.length) s.done++; }
+    if (i.missing) { s.missing++; s.first ??= i.k; }
+  }
+  return s;
+}
+
+// ---------- file ----------
+function kv(mode, fn) {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('riepilogo-attivita', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onerror = () => rej(r.error);
+    r.onsuccess = () => { const tx = r.result.transaction('kv', mode), q = fn(tx.objectStore('kv')); tx.oncomplete = () => res(q.result); tx.onerror = () => rej(tx.error); };
+  });
+}
+async function load(h) {
+  if (await h.requestPermission({mode:'readwrite'}) !== 'granted') return;
+  const f = await h.getFile();
+  data = JSON.parse(await f.text()); handle = h; lastMod = f.lastModified; migrate();
+  await kv('readwrite', s => s.put(h, 'file'));
+  $('gate').hidden = true; $('app').hidden = false;
+  $('qDate').value = today();
+  render(); scrollToDay(today(), false);
+  adoStart();
+}
+function save() {
+  setStatus('Salvataggio…', 'busy'); saving = true;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      const w = await handle.createWritable(); await w.write(JSON.stringify(data, null, 1)); await w.close();
+      lastMod = (await handle.getFile()).lastModified;
+      setStatus('Salvato alle ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'}));
+    } catch (err) { setStatus('Errore di salvataggio', 'err'); toast('Salvataggio non riuscito: ' + err.message); }
+    saving = false;
+  }, 300);
+}
+const setStatus = (t, cls = '') => { $('status').textContent = t; $('status').className = cls; };
+$('open').onclick = async () => { const [h] = await showOpenFilePicker({types:[{description:'Attività', accept:{'application/json':['.json']}}]}); load(h); };
+kv('readonly', s => s.get('file')).then(async h => {
+  if (!h) return;
+  // se il permesso è già concesso ("Consenti a ogni visita") il file si apre da solo; altrimenti il browser vuole un clic
+  if (await h.queryPermission({mode:'readwrite'}) === 'granted') return load(h);
+  $('reopen').hidden = false; $('reopen').onclick = () => load(h); $('reopen').focus();
+}).catch(() => {});
+// il file può essere cambiato da un altro PC via OneDrive: al rientro sulla pagina lo rileggo
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden || !handle || saving) return;
+  const f = await handle.getFile();
+  if (f.lastModified > lastMod) { data = JSON.parse(await f.text()); lastMod = f.lastModified; migrate(); undoStack = []; render(); toast('Il file era cambiato: ricaricato'); }
+});
+
+// ---------- modifiche con undo ----------
+function mutate(fn, msg) {
+  undoStack.push(JSON.stringify(data)); if (undoStack.length > 100) undoStack.shift();
+  fn(); reindex(); save();
+  if (msg) toast(msg, true);
+}
+function undo() {
+  const s = undoStack.pop(); if (!s) return toast('Niente da annullare');
+  data = JSON.parse(s); save(); render(); toast('Modifica annullata');
+}
+// inserisce mantenendo l'ordine per data
+function insert(e, after) {
+  const i = after ? data.entries.indexOf(after) : data.entries.findLastIndex(x => x.date <= e.date);
+  data.entries.splice(i + 1, 0, e);
+}
+const newEntry = (date, o = {}) => ({id:crypto.randomUUID(), date, activity:'', task:null, hours:null, commessa:null, note:null, context:null, ...o});
+const find = id => data.entries.find(e => e.id === id);
+
+// ---------- render ----------
+function render() {
+  reindex();
+  const [y, m] = ym;
+  $('month').textContent = `${MONTHS[m]} ${y}`;
+  $('vDiary').classList.toggle('on', view === 'diary'); $('vRas').classList.toggle('on', view === 'ras'); $('vCharts').classList.toggle('on', view === 'charts');
+  $('colhead').hidden = !!query || view !== 'diary';
+  renderChrome();
+  $('content').innerHTML = query ? searchView() : view === 'diary' ? diary() : view === 'ras' ? ras() : charts();
+  if (!query && view === 'diary') paintWarnings();
+}
+// testata: chi sono, oggi, e lo sprint che contiene oggi (non quello del mese visualizzato)
+function heroHtml() {
+  const k = today(), s = sprintOf(k), name = data.owner || data.ado.me;
+  const next = data.sprints.find(x => x.start > k);
+  let sp = next
+    ? `<button class="hero-sp none" data-sprint-chart="${data.sprints.indexOf(next)}">Nessuno sprint in corso · prossimo: <b>${esc(next.name)}</b> da ${shortDate(next.start)}</button>`
+    : `<div class="hero-sp none">Nessuno sprint in corso · <button class="link" data-sprints>definiscine uno</button></div>`;
+  if (s) {
+    const days = [];
+    for (let d = s.start; d <= s.end; d = addDays(d, 1)) days.push(dayInfo(parseIso(d)));
+    const work = days.filter(i => !i.we && !i.hol), cap = work.length * H, left = work.filter(i => i.k > k).length;
+    const reg = days.reduce((t, i) => t + i.es.reduce((x, e) => x + rowHours(e), 0), 0), elapsed = work.filter(i => i.k <= k).length * H;
+    sp = `<button class="hero-sp" data-sprint-chart="${data.sprints.indexOf(s)}" title="Apri i grafici dello sprint">
+      <span class="hs-top"><b>${esc(s.name)}</b><span>${shortDate(s.start)} – ${shortDate(s.end)}</span></span>
+      <span class="hs-meta">Giorno ${days.findIndex(i => i.k === k) + 1} di ${days.length} · ${left} ${left === 1 ? 'giorno lavorativo rimasto' : 'giorni lavorativi rimasti'}</span>
+      <span class="bar hs-bar" title="Il segno indica le ore attese fino a oggi"><i style="width:${Math.min(100, reg / cap * 100)}%"></i><u style="left:${elapsed / cap * 100}%"></u></span>
+      <span class="hs-meta"><b>${fmt(reg) || 0}</b> / ${cap} h registrate · attese a oggi ${elapsed}</span></button>`;
+  }
+  const oggi = new Date().toLocaleDateString('it-IT', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  return `<div class="hero-who"><button class="hero-name" data-owner title="Clic per cambiare">${esc(name) || 'Imposta nome e cognome'}</button><span class="hs-meta">${oggi}</span></div>${sp}`;
+}
+$('hero').onclick = ev => {
+  const t = ev.target.closest('button'); if (!t) return;
+  if ('owner' in t.dataset) {
+    const v = prompt('Nome e cognome da mostrare in testata (vuoto = quello di Azure DevOps)', data.owner || data.ado.me || '');
+    if (v !== null) { mutate(() => { data.owner = v.trim() || undefined; }); renderChrome(); }
+  } else if ('sprints' in t.dataset) openSprints();
+  else if (t.dataset.sprintChart) { view = 'charts'; query = ''; $('q').value = ''; chartSprint = +t.dataset.sprintChart; render(); window.scrollTo(0, 0); }
+};
+function renderChrome() {
+  const [y, m] = ym, s = monthStats(y, m);
+  $('hero').innerHTML = heroHtml();
+  $('side').innerHTML = `<div class="year"><button class="icon" data-year="-1">‹</button>${y}<button class="icon" data-year="1">›</button></div>` +
+    MONTHS.map((n, i) => { const t = monthStats(y, i); return `<button class="mon${i === m ? ' on' : ''}" data-mon="${i}"><span>${n}</span>${t.missing ? `<span class="badge" title="Giorni da compilare">${t.missing}</span>` : ''}<span class="mh">${t.hours ? fmt(t.hours) + ' h' : ''}</span></button>`; }).join('');
+  $('kpis').innerHTML = `<div class="kpi"><b>${fmt(s.hours) || 0}</b><span>ore registrate</span></div>
+    <div class="kpi"><b>${s.done}<span style="font-size:15px;color:var(--faint)"> / ${s.work}</span></b><span>giorni lavorativi compilati</span></div>
+    ${s.missing ? `<button class="kpi warn" data-goto="${s.first}"><b>${s.missing}</b><span>giorni da compilare →</span></button>` : `<div class="kpi"><b style="color:var(--ok)">✓</b><span>nessun giorno scoperto</span></div>`}`;
+}
+function totHtml(tot) {
+  if (!tot) return '';
+  return `<span class="bar ${tot > H ? 'over' : tot === H ? 'full' : ''}"><i style="width:${Math.min(100, tot / H * 100)}%"></i></span>${fmt(tot)} h`;
+}
+function diary() {
+  let h = '', weBuf = [];
+  const flush = () => { if (weBuf.length) h += `<div class="we-strip">${weBuf.join(' · ')}</div>`; weBuf = []; };
+  for (const d of monthDays(...ym)) {
+    const i = dayInfo(d);
+    if (i.we && !i.es.length) { weBuf.push(`${DOW[d.getDay()]} ${d.getDate()}`); continue; }
+    flush(); h += dayCard(i);
+  }
+  flush();
+  return h;
+}
+function dayCard(i) {
+  const cls = ['day', i.k === today() && 'today', i.missing && 'missing', i.hol && !i.es.length && 'holiday', i.we && 'weekend'].filter(Boolean).join(' ');
+  let h = `<section class="${cls}" id="d-${i.k}" data-day="${i.k}"><div class="dhead">
+    <div class="date"><span class="dnum">${i.d.getDate()}</span><span class="dname">${DOW[i.d.getDay()]}</span></div>
+    ${sprintChip(i.k)}${i.hol ? `<span class="chip">${esc(i.hol)}</span>` : ''}${i.missing ? '<span class="chip warn">Da compilare</span>' : ''}
+    <div class="dmeta"><span class="tot" data-tot="${i.k}">${totHtml(i.tot)}</span>
+    ${i.we || i.hol ? '' : `<select class="abs-pick" data-abs="${i.k}" title="Aggiungi un'assenza a questo giorno"><option value="">＋ Assenza</option>${codeOpts()}</select>`}
+    <button class="icon" data-add="${i.k}" title="Aggiungi attività a questo giorno">＋</button></div></div>`;
+  if (i.es.length) h += i.es.map(row).join('');
+  else if (!i.we && !i.hol) h += `<div class="empty"><button class="ghost" data-repeat="${i.k}">↻ Come il giorno prima</button>${['FER', 'PER', 'MAL'].map(c => `<button class="ghost" data-absent="${c}" data-date="${i.k}" title="${esc(CODE[c].causale)}">${esc(CODE[c].causale.split(' (')[0])}</button>`).join('')}</div>`;
+  return h + '</section>';
+}
+// per le assenze la colonna task diventa la combo del codice, e l'attività è la causale (modificabile)
+const row = e => `<div class="row${e.absence || e.hours == null ? ' absence' : ''}${e.ado ? ' ado' : ''}" data-id="${e.id}"${e.ado ? ' title="Importata da Azure DevOps"' : ''}>
+  <span class="grip" draggable="true" title="Trascina su un altro giorno">⠿</span>
+  <input data-f="activity" ${e.absence ? '' : 'data-ac'} value="${esc(e.activity)}" placeholder="${e.absence ? 'Causale' : 'Attività'}" title="${esc(e.activity)}">
+  ${e.absence ? `<select data-f="absence" class="mono" title="${esc(CODE[e.absence]?.causale ?? e.absence)}">${CODE[e.absence] ? '' : `<option selected>${esc(e.absence)}</option>`}${codeOpts(e.absence)}</select>`
+    : `<span class="tk"><input data-f="task" class="mono" value="${esc(e.task)}" placeholder="—" title="${esc(wiTip(e.task))}"><span class="tl">${wiLink(e.task)}</span><span data-aw="${e.id}"></span>${e.adoDate ? `<span class="moved" title="Su Azure DevOps queste ore risultano caricate ${shortDate(e.adoDate)}">⇄</span>` : ''}</span>`}
+  <span class="us">${usLink(e.task)}</span>
+  <input data-f="hours" inputmode="decimal" value="${fmt(e.hours)}" placeholder="${e.absence ? 'giorno' : '—'}" ${e.absence ? 'title="Vuoto = giornata intera"' : ''}>
+  <span class="pct">${pct(e.hours)}</span>
+  <input data-f="commessa" value="${esc(e.commessa)}" placeholder="">
+  <input data-f="note" value="${esc(e.note)}" placeholder="" title="${esc(e.note)}">
+  <span class="acts"><button class="icon" data-move="${e.id}" title="Sposta su un altro giorno">⇄</button><button class="icon" data-dup="${e.id}" title="Duplica (Ctrl+D)">⧉</button><button class="icon danger" data-del="${e.id}" title="Elimina">✕</button></span></div>`;
+
+function ras() {
+  const infos = monthDays(...ym).map(dayInfo), rows = new Map();
+  for (const i of infos) for (const e of i.es) {
+    const key = e.task || (e.absence ? '#' + e.absence : '~' + e.activity), r = rows.get(key) ?? {task:e.task, code:e.absence, descs:new Set(), cells:{}, tot:0};
+    r.descs.add(e.activity); r.tot += +e.hours || 0;
+    r.cells[i.k] = (r.cells[i.k] ?? 0) + (+e.hours || 0);
+    rows.set(key, r);
+  }
+  // prima i task numerati, poi le voci senza task (ferie, permessi…)
+  const sorted = [...rows.values()].sort((a, b) => !a.task - !b.task || String(a.task ?? [...a.descs][0]).localeCompare(String(b.task ?? [...b.descs][0]), 'it', {numeric:true}));
+  const cc = i => [i.we && 'we', i.hol && 'hol', i.d.getDay() === 1 && 'wk', i.k === today() && 'today'].filter(Boolean).join(' ');
+  let h = `<div class="ras-wrap"><table class="ras"><thead><tr><th class="lbl">Task</th>${infos.map(i => `<th class="${cc(i)}">${DOW[i.d.getDay()][0]}<b>${i.d.getDate()}</b></th>`).join('')}<th class="sum">Tot</th></tr></thead><tbody>`;
+  for (const r of sorted) {
+    h += `<tr><td class="lbl">${r.task || r.code ? `<b class="mono">${esc(r.task || r.code)}</b>` : ''}<span class="desc" title="${esc([...r.descs].join('\n'))}">${[...r.descs].map(esc).join(' · ')}</span></td>`;
+    h += infos.map(i => { const v = r.cells[i.k]; return v === undefined ? `<td class="${cc(i)}"></td>` : `<td class="v ${v ? '' : 'abs'} ${cc(i)}" data-goto="${i.k}">${v ? fmt(v) : '✓'}</td>`; }).join('');
+    h += `<td class="sum">${fmt(r.tot)}</td></tr>`;
+  }
+  if (!sorted.length) h += `<tr><td class="lbl" style="color:var(--muted)">Nessuna attività nel mese</td><td colspan="${infos.length + 1}"></td></tr>`;
+  const all = infos.reduce((s, i) => s + i.tot, 0);
+  h += `</tbody><tfoot><tr><td class="lbl">Totale giorno</td>${infos.map(i => `<td class="${cc(i)} ${i.missing ? 'miss' : i.tot > H ? 'over' : ''}" ${i.missing ? 'title="Da compilare"' : ''}>${i.missing ? '!' : fmt(i.tot || null)}</td>`).join('')}<td class="sum">${fmt(all)}</td></tr></tfoot></table></div>`;
+  return h;
+}
+// assenza senza ore = giornata intera
+const absHours = e => e.hours ?? H;
+// ore di lavoro per task, assenze per codice e totali per giorno in un intervallo di date (estremi compresi)
+function agg(from, to) {
+  const byCode = new Map(), byTask = new Map(), byDay = {};
+  for (const e of data.entries) {
+    if (e.date < from || e.date > to) continue;
+    const d = byDay[e.date] ??= {work:0, abs:0};
+    if (e.absence) { d.abs += absHours(e); const c = byCode.get(e.absence) ?? {h:0, n:0}; c.h += absHours(e); c.n++; byCode.set(e.absence, c); }
+    else if (e.hours) { d.work += +e.hours; const k = e.task || e.activity, t = byTask.get(k) ?? {task:e.task, label:e.activity, h:0}; t.h += +e.hours; byTask.set(k, t); }
+  }
+  return {byCode, byTask, byDay};
+}
+function colChart(items) {
+  const max = Math.max(1, ...items.map(v => v.work + v.abs));
+  const seg = (v, cls) => v ? `<i class="${cls}" style="height:${v / max * 170}px"></i>` : '';
+  return `<div class="legend"><span><i class="s1"></i>Lavoro</span><span><i class="s2"></i>Assenze</span></div>
+    <div class="cols">${items.map(v => `<div class="col${v.on ? ' on' : ''}" title="${esc(v.title)}\nLavoro: ${fmt(v.work) || 0} h\nAssenze: ${fmt(v.abs) || 0} h"><span class="ct">${fmt(v.work + v.abs || null)}</span><div class="stack">${seg(v.abs, 's2')}${seg(v.work, 's1')}</div></div>`).join('')}</div>
+    <div class="clbls">${items.map(v => `<span class="${v.on ? 'on' : ''}">${v.label}</span>`).join('')}</div>`;
+}
+function charts() {
+  const [y, m] = ym, sp = data.sprints[chartSprint];
+  let h = `<div class="chart-sel"><select id="chartSel" title="Periodo dei grafici"><option value="">Anno ${y} · ${MONTHS[m]}</option>${sprintOpts(sp ? chartSprint : null)}</select>
+    <button class="btn" data-sprints>Gestisci sprint…</button></div><div class="charts">`;
+  let codes, tasks, codesFor, tasksFor;
+  if (sp) {
+    const a = agg(sp.start, sp.end), days = [];
+    for (let k = sp.start; k <= sp.end; k = addDays(k, 1)) days.push(dayInfo(parseIso(k)));
+    const sum = f => Object.values(a.byDay).reduce((s, d) => s + d[f], 0), u = unlogged();
+    const cap = days.filter(i => !i.we && !i.hol).length * H, miss = days.filter(i => i.missing).length;
+    const gap = data.entries.filter(e => e.date >= sp.start && e.date <= sp.end).reduce((s, e) => s + (u.get(e.id) ?? 0), 0);
+    h += `<div class="kpis" style="grid-column:1/-1;margin:0">
+      <div class="kpi"><b>${fmt(sum('work')) || 0}</b><span>ore di lavoro</span></div>
+      <div class="kpi"><b>${fmt(sum('abs')) || 0}</b><span>ore di assenza</span></div>
+      <div class="kpi"><b>${fmt(sum('work') + sum('abs')) || 0}<span style="font-size:15px;color:var(--faint)"> / ${cap}</span></b><span>ore registrate su capacità</span></div>
+      <div class="kpi${miss ? ' warn' : ''}"><b>${miss}</b><span>giorni da compilare</span></div>
+      <div class="kpi${gap ? ' warn' : ''}"><b>${fmt(gap) || 0}</b><span>ore non caricate su DevOps</span></div></div>`;
+    h += `<div class="chart wide"><h3>Ore per giorno · ${esc(sp.name)}</h3><div class="sub">${shortDate(sp.start)} – ${shortDate(sp.end)} · assenze senza ore contate come giornata intera (${H} h)</div>
+      ${colChart(days.map(i => ({label:`${DOW[i.d.getDay()][0]} ${i.d.getDate()}`, title:shortDate(i.k), on:i.k === today(), ...(a.byDay[i.k] ?? {work:0, abs:0})})))}</div>`;
+    codes = tasks = a; codesFor = tasksFor = esc(sp.name);
+  } else {
+    const a = agg(`${y}-01-01`, `${y}-12-31`), months = MONTHS.map(() => ({work:0, abs:0}));
+    for (const [k, d] of Object.entries(a.byDay)) { const mo = months[+k.slice(5, 7) - 1]; mo.work += d.work; mo.abs += d.abs; }
+    h += `<div class="chart wide"><h3>Ore per mese · ${y}</h3><div class="sub">Assenze senza ore contate come giornata intera (${H} h)</div>
+      ${colChart(months.map((v, i) => ({...v, label:MONTHS[i].slice(0, 3), title:`${MONTHS[i]} ${y}`, on:i === m})))}</div>`;
+    codes = a; codesFor = y;
+    tasks = agg(iso(new Date(y, m, 1)), iso(new Date(y, m + 1, 0))); tasksFor = `${MONTHS[m]} ${y}`;
+  }
+  const hbars = (rows, txt, title) => { const mx = Math.max(...rows.map(r => r.h)); return rows.map(r => `<div class="hb" title="${esc(title(r))}"><span class="hl">${r.lbl}</span><span class="ht"><i style="width:${r.h / mx * 100}%"></i></span><b>${txt(r)}</b></div>`).join(''); };
+  const cs = [...codes.byCode].map(([code, c]) => ({...c, code, lbl:`<b class="mono">${esc(code)}</b> ${esc(CODE[code]?.causale ?? '')}`})).sort((a, b) => b.h - a.h);
+  h += `<div class="chart"><h3>Assenze per codice · ${codesFor}</h3><div class="sub">Giorni equivalenti (ore / ${H})</div>${cs.length ? hbars(cs, r => fmt(r.h / H) + ' gg', r => `${r.code} · ${CODE[r.code]?.causale ?? ''}\n${fmt(r.h)} h in ${r.n} righe`) : '<div class="nodata">Nessuna assenza nel periodo</div>'}</div>`;
+  const ts = [...tasks.byTask.values()].sort((a, b) => b.h - a.h).slice(0, 12).map(t => ({...t, lbl:`${t.task ? `<b class="mono">${esc(t.task)}</b> ` : ''}${esc(t.label)}`}));
+  h += `<div class="chart"><h3>Ore per task · ${tasksFor}</h3><div class="sub">I 12 task con più ore, assenze escluse</div>${ts.length ? hbars(ts, r => fmt(r.h) + ' h', r => `${r.task ?? ''} ${wiTip(r.task) || r.label}\n${fmt(r.h)} h`) : '<div class="nodata">Nessuna ora di lavoro nel periodo</div>'}</div>`;
+  return h + '</div>';
+}
+
+// ---------- sprint ----------
+let chartSprint = null;
+const sprintOf = k => data.sprints.find(s => s.start <= k && k <= s.end);
+// etichetta dello sprint nel giorno: giorno n su durata, evidenziata al primo giorno
+function sprintChip(k) {
+  const s = sprintOf(k); if (!s) return '';
+  const n = (parseIso(k) - parseIso(s.start)) / 864e5 + 1, len = (parseIso(s.end) - parseIso(s.start)) / 864e5 + 1;
+  return `<span class="chip sprint${k === s.start ? ' first' : ''}" title="${esc(s.name)}: dal ${shortDate(s.start)} al ${shortDate(s.end)}">${esc(s.name)} · g ${Math.round(n)}/${Math.round(len)}</span>`;
+}
+const mondayOf = k => { const d = parseIso(k); return addDays(k, -((d.getDay() + 6) % 7)); };
+const sprintOpts = sel => data.sprints.map((s, i) => [s, i]).reverse().map(([s, i]) => `<option value="${i}"${i === sel ? ' selected' : ''}>${esc(s.name)} · ${shortDate(s.start)} – ${shortDate(s.end)}</option>`).join('');
+function renderSprints() {
+  $('spDays').value = data.sprintDays;
+  $('spList').innerHTML = data.sprints.map((s, i) => [s, i]).reverse().map(([s, i]) => `<div class="dl-row" data-i="${i}">
+    <input data-k="name" value="${esc(s.name)}" aria-label="Nome"><input type="date" data-k="start" value="${s.start}" aria-label="Inizio"><input type="date" data-k="end" value="${s.end}" min="${s.start}" aria-label="Fine">
+    <button type="button" class="icon danger" data-spdel="${i}" title="Elimina sprint">✕</button></div>`).join('') || '<div class="nodata">Nessuno sprint: aggiungine uno.</div>';
+}
+function openSprints() { renderSprints(); $('dlgSprint').showModal(); }
+$('spAdd').onclick = () => {
+  const last = data.sprints.at(-1), start = last ? addDays(last.end, 1) : mondayOf(today());
+  mutate(() => data.sprints.push({name:`Sprint ${data.sprints.length + 1}`, start, end:addDays(start, data.sprintDays - 1)}));
+  renderSprints(); $('spList').querySelector('input')?.select();
+};
+$('spDays').onchange = () => { const n = parseInt($('spDays').value); if (n > 0) mutate(() => { data.sprintDays = n; }); else $('spDays').value = data.sprintDays; };
+$('spList').addEventListener('change', ev => {
+  const t = ev.target, s = data.sprints[t.closest('[data-i]').dataset.i], v = t.value.trim();
+  if (!v) return renderSprints();
+  mutate(() => {
+    // spostando l'inizio lo sprint conserva la sua durata
+    if (t.dataset.k === 'start') { const len = (parseIso(s.end) - parseIso(s.start)) / 864e5; s.start = v; s.end = addDays(v, Math.round(len)); }
+    else if (t.dataset.k === 'end') s.end = v < s.start ? s.start : v;
+    else s.name = v;
+    data.sprints.sort((a, b) => a.start.localeCompare(b.start));
+  });
+  renderSprints();
+});
+$('spList').addEventListener('click', ev => {
+  const i = ev.target.closest('[data-spdel]')?.dataset.spdel; if (i == null) return;
+  const s = data.sprints[i]; mutate(() => data.sprints.splice(i, 1), `Eliminato “${s.name}”`); chartSprint = null; renderSprints();
+});
+$('dlgSprint').addEventListener('close', () => render());
+$('sprints').onclick = openSprints;
+
+// ---------- export ----------
+function openExport() {
+  $('exWeek').value ||= today(); $('exMonth').value ||= today().slice(0, 7);
+  const cur = data.sprints.findIndex(s => s.start <= today() && today() <= s.end);
+  $('exSprint').innerHTML = sprintOpts(cur) || '<option value="">Nessuno sprint definito</option>';
+  syncExport(); $('dlgExport').showModal();
+}
+function exportRange() {
+  const per = $('fExport').per.value;
+  if (per === 'week') { const mon = mondayOf($('exWeek').value || today()); return {from:mon, to:addDays(mon, 6), label:`settimana_${mon}`}; }
+  if (per === 'month') { const [y, m] = ($('exMonth').value || today().slice(0, 7)).split('-').map(Number); return {from:iso(new Date(y, m - 1, 1)), to:iso(new Date(y, m, 0)), label:`${y}-${String(m).padStart(2, '0')}`}; }
+  const s = data.sprints[$('exSprint').value];
+  return s && {from:s.start, to:s.end, label:s.name.replace(/[^\w-]+/g, '_')};
+}
+// ore di una riga per l'export: un'assenza senza ore vale una giornata intera
+const rowHours = e => e.absence ? absHours(e) : +e.hours || 0;
+function syncExport() {
+  const per = $('fExport').per.value;
+  $('exWeek').hidden = per !== 'week'; $('exMonth').hidden = per !== 'month'; $('exSprint').hidden = per !== 'sprint';
+  const r = exportRange(), rows = r ? data.entries.filter(e => e.date >= r.from && e.date <= r.to) : [];
+  $('exInfo').textContent = r ? `Dal ${shortDate(r.from)} al ${shortDate(r.to)} · ${rows.length} righe · ${fmt(rows.reduce((s, e) => s + rowHours(e), 0)) || 0} h` : 'Definisci prima uno sprint';
+  $('exGo').disabled = !rows.length;
+}
+// CSV per Excel in italiano: separatore ";", virgola decimale, BOM perché apra l'UTF-8 correttamente
+function exportCsv({from, to, label}) {
+  const rows = data.entries.filter(e => e.date >= from && e.date <= to);
+  const cell = v => { v = v == null ? '' : String(v); return /[";\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+  const head = ['Data', 'Giorno', 'Attività', 'Task', 'Descrizione task', 'US', 'Descrizione US', 'Codice assenza', 'Causale assenza', 'Ore', 'Commessa', 'Note'];
+  const lines = rows.map(e => {
+    const w = isWi(e.task) ? wi(e.task) : null, p = w?.parent ? wi(w.parent) : null;
+    return [e.date.split('-').reverse().join('/'), DOW[parseIso(e.date).getDay()], e.activity, e.task, w?.title, w?.parent, p?.title, e.absence, e.absence && CODE[e.absence]?.causale, fmt(rowHours(e)), e.commessa, e.note];
+  });
+  lines.push([], ['', '', 'Totale', '', '', '', '', '', '', fmt(rows.reduce((s, e) => s + rowHours(e), 0))]);
+  const csv = '﻿' + [head, ...lines].map(r => r.map(cell).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'})); a.download = `attivita_${label}.csv`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(`Esportate ${rows.length} righe`);
+}
+$('fExport').addEventListener('change', syncExport);
+$('fExport').addEventListener('input', syncExport);
+$('fExport').onsubmit = ev => { if (ev.submitter?.value !== 'ok') return; const r = exportRange(); if (r) exportCsv(r); };
+$('export').onclick = openExport;
+function searchView() {
+  const q = query.toLowerCase(), hl = v => esc(v).replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/[&<>"]/g, c => esc(c)), 'gi'), m => `<mark>${m}</mark>`);
+  const hits = data.entries.filter(e => [e.activity, e.task, e.absence, e.commessa, e.note].some(v => v && String(v).toLowerCase().includes(q))).sort((a, b) => b.date.localeCompare(a.date));
+  const tot = hits.reduce((s, e) => s + (+e.hours || 0), 0);
+  return `<div class="hits-head"><b>${hits.length}</b> righe per “${esc(query)}” · <b>${fmt(tot) || 0} h</b> in totale</div>` +
+    hits.map(e => `<div class="hit" data-goto="${e.date}" data-id="${e.id}"><span class="hd">${shortDate(e.date)}</span><span>${hl(e.activity)}${e.note ? ` <span class="hd">— ${hl(e.note)}</span>` : ''}</span><span class="mono">${hl(e.task ?? '')}</span><span class="hh">${fmt(e.hours)}</span></div>`).join('');
+}
+
+// ---------- navigazione ----------
+function goMonth(y, m) { ym = [y, m]; render(); window.scrollTo(0, 0); }
+function scrollToDay(k, smooth = true, id) {
+  const [y, m] = k.split('-').map(Number);
+  if (query) { query = ''; $('q').value = ''; }
+  view = 'diary';
+  if (y !== ym[0] || m - 1 !== ym[1]) ym = [y, m - 1];
+  render();
+  const el = id ? document.querySelector(`.row[data-id="${id}"]`) : $('d-' + k);
+  el?.scrollIntoView({block:'center', behavior: smooth ? 'smooth' : 'auto'});
+  if (id) el?.classList.add('flash');
+}
+$('prev').onclick = () => goMonth(...(ym[1] ? [ym[0], ym[1]-1] : [ym[0]-1, 11]));
+$('next').onclick = () => goMonth(...(ym[1] < 11 ? [ym[0], ym[1]+1] : [ym[0]+1, 0]));
+$('today').onclick = () => scrollToDay(today());
+$('vDiary').onclick = () => { view = 'diary'; query = ''; $('q').value = ''; render(); };
+$('vRas').onclick = () => { view = 'ras'; query = ''; $('q').value = ''; render(); };
+$('vCharts').onclick = () => { view = 'charts'; query = ''; $('q').value = ''; render(); };
+$('q').oninput = () => { query = $('q').value.trim(); render(); };
+$('side').onclick = ev => {
+  const t = ev.target.closest('button'); if (!t) return;
+  if (t.dataset.mon) goMonth(ym[0], +t.dataset.mon); else if (t.dataset.year) goMonth(ym[0] + +t.dataset.year, ym[1]);
+};
+$('kpis').onclick = ev => { const t = ev.target.closest('[data-goto]'); if (t) scrollToDay(t.dataset.goto); };
+
+// ---------- inserimento rapido ----------
+$('quick').onsubmit = ev => {
+  ev.preventDefault();
+  const hours = parseHours($('qH').value);
+  if (hours === undefined) { $('qH').focus(); return toast('Ore non valide'); }
+  const e = newEntry($('qDate').value, {activity:$('qAct').value.trim(), task:$('qTask').value.trim() || null, hours, commessa:$('qCom').value.trim() || null, note:$('qNote').value.trim() || null});
+  if (!e.activity || !e.date) return;
+  mutate(() => insert(e), `Aggiunta a ${shortDate(e.date)}`);
+  for (const id of ['qAct', 'qTask', 'qH', 'qCom', 'qNote']) $(id).value = '';
+  scrollToDay(e.date, true, e.id);
+  $('qAct').focus();
+  ensureItems([e.task]).then(n => n && render());
+};
+$('quick').addEventListener('keydown', ev => { if (ev.key === 'Escape' && !acOpenFor) { ev.target.blur(); } });
+
+// ---------- azioni sulle righe ----------
+$('content').addEventListener('click', ev => {
+  const t = ev.target.closest('button, [data-goto]'); if (!t) return;
+  const ds = t.dataset;
+  if (ds.add) { $('qDate').value = ds.add; $('qAct').focus(); $('qAct').select(); }
+  else if (ds.del) { const e = find(ds.del); mutate(() => data.entries.splice(data.entries.indexOf(e), 1), `Eliminata “${e.activity.slice(0, 40)}”`); render(); }
+  else if (ds.dup) duplicate(ds.dup);
+  else if (ds.move) pickDay(ds.move, t);
+  else if (ds.absent) addAbsence(ds.date, ds.absent);
+  else if (ds.repeat) repeatPrevious(ds.repeat);
+  else if (ds.push) pushHours(ds.push);
+  else if ('sprints' in ds) openSprints();
+  else if (ds.goto) scrollToDay(ds.goto, true, t.classList.contains('hit') ? ds.id : undefined);
+});
+function addAbsence(date, code) {
+  const e = newEntry(date, {activity: CODE[code].causale, absence: code});
+  mutate(() => insert(e), `${CODE[code].causale}: ${shortDate(date)}`);
+  render(); focusField(e.id, 'hours');
+}
+function duplicate(id) {
+  const src = find(id), e = {...src, id: crypto.randomUUID()};
+  mutate(() => insert(e, src), 'Riga duplicata'); render(); focusField(e.id, 'activity');
+}
+function repeatPrevious(d) {
+  const prev = [...byDate.keys()].filter(k => k < d && byDate.get(k).some(e => e.hours)).sort().pop();
+  if (!prev) return toast('Nessun giorno precedente da copiare');
+  // solo le attività: le assenze (allattamento compreso) non si ripetono da sole
+  const copies = byDate.get(prev).filter(e => e.hours && !e.absence).map(e => ({...e, id: crypto.randomUUID(), date: d, note: null}));
+  mutate(() => copies.forEach(e => insert(e)), `Copiate ${copies.length} righe da ${shortDate(prev)}`);
+  render();
+}
+function focusField(id, f) { const el = document.querySelector(`.row[data-id="${id}"] [data-f="${f}"]`); el?.focus(); el?.select(); }
+
+// modifica in cella: aggiorno solo i totali, senza ridisegnare (non perdo il focus)
+$('content').addEventListener('change', ev => {
+  const t = ev.target;
+  if (t.id === 'chartSel') { chartSprint = t.value === '' ? null : +t.value; render(); }
+  else if (t.dataset.abs) addAbsence(t.dataset.abs, t.value);
+  else commit(t);
+});
+function commit(t, extra) {
+  const r = t.closest('.row'); if (!r || !t.dataset.f) return;
+  const e = find(r.dataset.id), f = t.dataset.f;
+  let v = f === 'hours' ? parseHours(t.value) : (t.value.trim() || null);
+  if (v === undefined) { t.classList.add('bad'); toast('Ore non valide: usa un numero, es. 2,5'); t.value = fmt(e.hours); return; }
+  t.classList.remove('bad');
+  if (f === 'activity' && !v) { t.value = e.activity; return; }
+  if (e[f] === v && !extra) return;
+  mutate(() => {
+    const old = e[f]; e[f] = v; Object.assign(e, extra);
+    if (f === 'activity' && !e.task && !e.absence) { const s = sugg.find(s => s.activity === v); if (s?.task) e.task = s.task; }
+    // cambiando codice la causale segue, a meno che non fosse stata personalizzata
+    if (f === 'absence' && e.activity === (CODE[old]?.causale ?? old)) e.activity = CODE[v].causale;
+  });
+  r.querySelector('[data-f=activity]').value = e.activity;
+  if (f === 'absence') t.title = CODE[v].causale;
+  const tk = r.querySelector('[data-f=task]'); if (tk) tk.value = e.task ?? '';
+  adoCells(r, e);
+  if (isWi(e.task) && !wi(e.task)) ensureItems([e.task]).then(() => { adoCells(r, e); paintWarnings(); });
+  const gap = paintWarnings().get(e.id);
+  if (gap && (f === 'hours' || f === 'task')) toast(`${fmt(gap)} h sul task ${e.task} non sono ancora su Azure DevOps`, false, {label:'Caricale', fn:() => pushHours(e.id)});
+  r.querySelector('[data-f=commessa]').value = e.commessa ?? '';
+  r.querySelector('[data-f=hours]').value = fmt(e.hours);
+  r.querySelector('.pct').textContent = pct(e.hours);
+  r.classList.toggle('absence', !!e.absence || e.hours == null);
+  document.querySelector(`[data-tot="${e.date}"]`).innerHTML = totHtml(byDate.get(e.date).reduce((s, x) => s + (+x.hours || 0), 0));
+  renderChrome();
+}
+$('content').addEventListener('focusin', ev => { if (ev.target.matches('[data-f=hours],[data-f=task]')) ev.target.select(); });
+$('content').addEventListener('keydown', ev => {
+  const t = ev.target; if (!t.dataset.f || acOpenFor || t.tagName === 'SELECT') return; // sulle combo le frecce restano native
+  const move = dir => {
+    const all = [...document.querySelectorAll(`#content [data-f="${t.dataset.f}"]`)], n = all[all.indexOf(t) + dir];
+    if (n) { ev.preventDefault(); n.focus(); }
+  };
+  if (ev.key === 'ArrowDown' || (ev.key === 'Enter' && !ev.shiftKey)) { commit(t); move(1); }
+  else if (ev.key === 'ArrowUp' || (ev.key === 'Enter' && ev.shiftKey)) { commit(t); move(-1); }
+  else if (ev.key === 'Escape') { const e = find(t.closest('.row').dataset.id); t.value = t.dataset.f === 'hours' ? fmt(e.hours) : e[t.dataset.f] ?? ''; t.blur(); }
+  else if (ev.key.toLowerCase() === 'd' && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); commit(t); duplicate(t.closest('.row').dataset.id); }
+});
+
+// trascina una riga su un altro giorno
+let dragId = null;
+$('content').addEventListener('dragstart', ev => {
+  const r = ev.target.closest('.row'); if (!r) return;
+  dragId = r.dataset.id; r.classList.add('dragging');
+  ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', dragId); ev.dataTransfer.setDragImage(r, 20, 16);
+});
+$('content').addEventListener('dragend', () => { dragId = null; document.querySelectorAll('.dragging,.drop').forEach(x => x.classList.remove('dragging', 'drop')); });
+$('content').addEventListener('dragover', ev => {
+  const d = dragId && ev.target.closest('.day'); if (!d) return;
+  ev.preventDefault();
+  document.querySelectorAll('.day.drop').forEach(x => x !== d && x.classList.remove('drop')); d.classList.add('drop');
+});
+$('content').addEventListener('drop', ev => {
+  const d = ev.target.closest('.day'); if (!d || !dragId) return;
+  ev.preventDefault();
+  moveEntry(find(dragId), d.dataset.day);
+});
+function moveEntry(e, to) {
+  if (!e || e.date === to) return;
+  mutate(() => {
+    data.entries.splice(data.entries.indexOf(e), 1);
+    // una riga importata da DevOps ricorda il giorno in cui lì risulta caricata; tornando su quel giorno il segno sparisce
+    if (e.ado) { e.adoDate ??= e.date; if (e.adoDate === to) delete e.adoDate; }
+    e.date = to; insert(e);
+  }, `Spostata a ${shortDate(to)}`);
+  render();
+}
+// il pulsante ⇄ apre il calendario nativo di un input nascosto, posizionato sotto il pulsante
+function pickDay(id, anchor) {
+  const p = $('movePick'), r = anchor.getBoundingClientRect();
+  Object.assign(p.style, {left: r.left + 'px', top: r.bottom + 'px'});
+  p.dataset.id = id; p.value = find(id).date;
+  try { p.showPicker(); } catch { const v = prompt('Sposta al giorno (AAAA-MM-GG)', p.value); if (/^\d{4}-\d\d-\d\d$/.test(v ?? '')) moveEntry(find(id), v); }
+}
+$('movePick').onchange = ev => { if (ev.target.value) moveEntry(find(ev.target.dataset.id), ev.target.value); };
+
+// ---------- autocompletamento attività ----------
+let acOpenFor = null, acItems = [], acSel = 0;
+function acShow(input) {
+  const q = input.value.trim().toLowerCase();
+  acItems = sugg.filter(s => s.activity !== input.value && (!q || s.activity.toLowerCase().includes(q) || (s.task ?? '').includes(q))).slice(0, 8);
+  if (!acItems.length) return acHide();
+  // nessuna voce preselezionata: Invio conferma il testo scritto, la scelta si fa con ↓
+  acOpenFor = input; acSel = -1;
+  const r = input.getBoundingClientRect(), ac = $('ac');
+  Object.assign(ac.style, {left: r.left + 'px', top: r.bottom + 4 + 'px', width: Math.max(r.width, 380) + 'px'});
+  ac.innerHTML = acItems.map((s, i) => `<div class="opt" data-i="${i}"><span class="oa">${esc(s.activity)}</span>${s.task ? `<span class="chip mono">${esc(s.task)}</span>` : ''}<span class="od">${shortDate(s.last)}</span></div>`).join('');
+  ac.hidden = false;
+}
+function acHide() { $('ac').hidden = true; acOpenFor = null; }
+function acPick(s) {
+  const input = acOpenFor; acHide();
+  if (input.id === 'qAct') {
+    input.value = s.activity; $('qTask').value = s.task ?? ''; if (s.commessa) $('qCom').value = s.commessa;
+    $('qH').focus();
+  } else {
+    input.value = s.activity;
+    commit(input, {task: s.task ?? find(input.closest('.row').dataset.id).task, ...(s.commessa ? {commessa: s.commessa} : {})});
+    focusField(input.closest('.row').dataset.id, 'hours');
+  }
+}
+document.addEventListener('focusin', ev => { if (ev.target.matches('[data-ac]')) acShow(ev.target); });
+document.addEventListener('input', ev => { if (ev.target.matches('[data-ac]')) acShow(ev.target); });
+document.addEventListener('focusout', ev => { if (ev.target === acOpenFor) setTimeout(() => { if (document.activeElement !== acOpenFor) acHide(); }, 150); });
+document.addEventListener('keydown', ev => {
+  if (!acOpenFor || ev.target !== acOpenFor) return;
+  const opts = $('ac').children;
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    ev.preventDefault(); ev.stopImmediatePropagation();
+    opts[acSel]?.classList.remove('sel');
+    acSel = ev.key === 'ArrowDown' ? (acSel + 1) % acItems.length : (acSel <= 0 ? acItems.length : acSel) - 1;
+    opts[acSel].classList.add('sel'); opts[acSel].scrollIntoView({block:'nearest'});
+  } else if ((ev.key === 'Enter' || ev.key === 'Tab') && acSel >= 0) {
+    ev.preventDefault(); ev.stopImmediatePropagation(); acPick(acItems[acSel]);
+  } else if (ev.key === 'Escape') { ev.stopImmediatePropagation(); acHide(); }
+  else if (ev.key === 'Enter') acHide();
+}, true);
+$('ac').addEventListener('mousedown', ev => { const o = ev.target.closest('.opt'); if (o) { ev.preventDefault(); acPick(acItems[+o.dataset.i]); } });
+window.addEventListener('scroll', () => acOpenFor && acHide(), true);
+
+// ---------- scorciatoie globali ----------
+document.addEventListener('keydown', ev => {
+  if (!data || document.querySelector('dialog[open]')) return;
+  const inField = ev.target.matches('input, select');
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z' && !inField) { ev.preventDefault(); undo(); }
+  else if (ev.altKey && ev.key === 'ArrowLeft') $('prev').click();
+  else if (ev.altKey && ev.key === 'ArrowRight') $('next').click();
+  else if (!inField && ev.key === '/') { ev.preventDefault(); $('q').focus(); }
+  else if (!inField && ev.key.toLowerCase() === 'n' && !ev.ctrlKey) { ev.preventDefault(); $('qAct').focus(); }
+});
+
+// ---------- Azure DevOps ----------
+const ADO = 'https://dev.azure.com/NetaSaasPoc', ADO_PRJ = 'NetaNextGenSuite';
+let pat = null, adoAuth = () => 'Basic ' + btoa(':' + pat);
+const isWi = t => /^\d+$/.test(t ?? '');
+const wi = id => data.ado.items[id];
+const wiUrl = id => `${ADO}/${ADO_PRJ}/_workitems/edit/${id}`;
+const wiTip = id => wi(id) ? `${wi(id).type} ${id} — ${wi(id).title}` : isWi(id) ? (pat ? 'Descrizione non disponibile su Azure DevOps' : 'Collega Azure DevOps (pulsante DevOps ⟳) per vedere descrizione e US') : '';
+const wiLink = id => isWi(id) ? `<a href="${wiUrl(id)}" target="_blank" rel="noopener" title="${esc(wiTip(id) || 'Apri su Azure DevOps')}">↗</a>` : '';
+const usLink = id => { const p = isWi(id) && wi(id)?.parent; return p ? `<a class="mono" href="${wiUrl(p)}" target="_blank" rel="noopener" title="${esc(wiTip(p))}">${p}</a>` : ''; };
+const addDays = (k, n) => { const d = parseIso(k); d.setDate(d.getDate() + n); return iso(d); };
+function adoCells(r, e) {
+  const tk = r.querySelector('[data-f=task]'); if (!tk) return;
+  tk.title = wiTip(e.task); r.querySelector('.tl').innerHTML = wiLink(e.task); r.querySelector('.us').innerHTML = usLink(e.task);
+}
+async function adoFetch(path, body, method = body ? 'POST' : 'GET') {
+  const r = await fetch(`${ADO}/${path}${path.includes('?') ? '&' : '?'}api-version=${path.includes('connectionData') ? '7.1-preview' : '7.1'}`,
+    {method, headers: {Authorization: adoAuth(), ...(body && {'Content-Type': method === 'PATCH' ? 'application/json-patch+json' : 'application/json'})}, body: body && JSON.stringify(body)});
+  // con un PAT non valido Azure DevOps risponde 203 con la pagina di login, non 401
+  if (r.status === 401 || r.status === 203) throw Object.assign(new Error('PAT non valido o scaduto'), {auth: true});
+  if (r.status === 403) throw new Error('il PAT non ha il permesso necessario (Work Items: Read & write)');
+  if (!r.ok) throw new Error(await r.json().then(j => j.message).catch(() => '') || `HTTP ${r.status}`);
+  return r.json();
+}
+const CW = 'Microsoft.VSTS.Scheduling.CompletedWork', RW = 'Microsoft.VSTS.Scheduling.RemainingWork';
+const cacheItem = w => { const f = w.fields; data.ado.items[w.id] = {title:f['System.Title'], type:f['System.WorkItemType'], parent:f['System.Parent'] ?? null, completed:f[CW] ?? null, remaining:f[RW] ?? null, rev:w.rev}; };
+function adoError(err) {
+  if (err.auth) { pat = null; $('ado').classList.add('primary'); kv('readwrite', s => s.delete('pat')).catch(() => {}); }
+  setStatus('DevOps: ' + err.message, 'err'); toast('Azure DevOps: ' + err.message);
+}
+// titolo, tipo, padre e ore dei work item (e dei loro padri) che non ho in cache, o di tutti con force; ritorna quanti ne ha scaricati
+async function fetchItems(ids, force) {
+  const todo = [...new Set(ids.filter(isWi).map(String))].filter(id => force || !wi(id));
+  let n = 0;
+  for (let i = 0; i < todo.length; i += 200) {
+    const r = await adoFetch(`_apis/wit/workitems?ids=${todo.slice(i, i + 200).join(',')}&fields=System.Title,System.WorkItemType,System.Parent,${CW},${RW}&errorPolicy=omit`);
+    for (const w of r.value) if (w) { n++; cacheItem(w); }
+  }
+  const parents = todo.map(id => wi(id)?.parent).filter(p => p && !wi(p));
+  return n + (parents.length ? await fetchItems(parents) : 0);
+}
+async function ensureItems(ids) {
+  if (!pat) return 0;
+  try { const n = await fetchItems(ids); if (n) save(); return n; } catch (err) { adoError(err); return 0; }
+}
+// le ore stanno nel Completed Work dei task, che è cumulativo: le ore di un giorno sono gli incrementi fatti da me quel giorno
+async function adoFind(since) {
+  const who = (await adoFetch('_apis/connectionData')).authenticatedUser, me = who.properties.Account.$value.toLowerCase();
+  data.ado.me = who.providerDisplayName; // nome per la testata, se non l'ho impostato a mano
+  const q = await adoFetch(`${ADO_PRJ}/_apis/wit/wiql`, {query: `SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = 'Task' AND [System.ChangedDate] >= '${since}' AND ([System.AssignedTo] = @Me OR [System.ChangedBy] = @Me)`});
+  const ids = q.workItems.map(w => String(w.id));
+  // ponytail: una pagina di revisioni per task (200), basta finché un task non ne accumula di più
+  const hist = await Promise.all(ids.map(id => adoFetch(`_apis/wit/workitems/${id}/updates?$top=200`)));
+  const found = [];
+  ids.forEach((id, i) => {
+    const perDay = {};
+    for (const u of hist[i].value) {
+      const cw = u.fields?.['Microsoft.VSTS.Scheduling.CompletedWork'], at = u.fields?.['System.ChangedDate']?.newValue;
+      if (!cw || !at || u.revisedBy?.uniqueName?.toLowerCase() !== me) continue;
+      const day = iso(new Date(at));
+      if (day >= since) perDay[day] = (perDay[day] ?? 0) + (cw.newValue ?? 0) - (cw.oldValue ?? 0);
+    }
+    for (const [date, h] of Object.entries(perDay)) if (h > 0) found.push({id, date, hours: +h.toFixed(2)});
+  });
+  await fetchItems(ids, true);
+  return found;
+}
+// Le ore su DevOps spesso le carico il giorno dopo: non confronto giorno per giorno ma per task.
+// Le ore che il diario ha già per quel task (da qualche giorno prima della finestra) coprono gli incrementi
+// DevOps in ordine di data; si importa solo la parte scoperta, nel giorno in cui risulta su DevOps.
+function imports(found, since) {
+  const from = addDays(since, -3), credit = {}, seen = new Set(data.ado.seen), out = [];
+  for (const e of data.entries) if (e.task && e.hours && e.date >= from) credit[e.task] = (credit[e.task] ?? 0) + +e.hours;
+  // ore di giorni vecchi caricate da qui di recente: l'incremento su DevOps è recente, la riga del diario è fuori finestra
+  for (const p of data.ado.pushed) if (p.at >= from && p.date < from) credit[p.task] = (credit[p.task] ?? 0) + p.hours;
+  for (const f of found.sort((a, b) => a.date.localeCompare(b.date))) {
+    const take = Math.min(credit[f.id] ?? 0, f.hours), rest = +(f.hours - take).toFixed(2), key = `${f.id}@${f.date}`;
+    credit[f.id] = (credit[f.id] ?? 0) - take;
+    if (rest <= 0 || seen.has(key)) continue;
+    seen.add(key); // una riga importata e poi cancellata a mano non deve tornare
+    out.push(newEntry(f.date, {activity: wi(f.id)?.title ?? `Task ${f.id}`, task: f.id, hours: rest, ado: true}));
+  }
+  data.ado.seen = [...seen];
+  return out;
+}
+async function adoSync() {
+  if (!pat) return;
+  setStatus('Azure DevOps…', 'busy');
+  try {
+    // rileggo sempre l'ultima settimana già vista, per le ore caricate in ritardo; la prima volta l'ultimo mese
+    const since = data.ado.syncedTo ? addDays(data.ado.syncedTo, -7) : addDays(today(), -30);
+    const fresh = imports(await adoFind(since), since);
+    data.ado.syncedTo = today();
+    if (document.activeElement?.closest?.('.row')) commit(document.activeElement);
+    fresh.forEach(e => insert(e));
+    if (fresh.length) undoStack = []; // gli snapshot precedenti non hanno le righe importate
+    save(); render();
+    if (fresh.length) toast(`Importate ${fresh.length} righe da Azure DevOps`);
+  } catch (err) { adoError(err); }
+}
+// Ore del diario non ancora su DevOps: per ogni task, quanto il diario supera il Completed Work,
+// attribuito alle righe più recenti. Ritorna id riga → ore scoperte.
+// ponytail: il diario parte dal 2026, quindi su task con ore del 2025 il confronto sottostima lo scoperto
+function unlogged() {
+  const out = new Map(), byTask = new Map();
+  for (const e of data.entries) if (isWi(e.task) && +e.hours > 0) (byTask.get(e.task) ?? byTask.set(e.task, []).get(e.task)).push(e);
+  for (const [t, es] of byTask) {
+    const w = wi(t); if (w?.type !== 'Task' || w.completed === undefined) continue;
+    let gap = es.reduce((s, e) => s + +e.hours, 0) - (w.completed ?? 0);
+    for (const e of es.sort((a, b) => b.date.localeCompare(a.date))) {
+      if (gap < 0.01) break;
+      const h = Math.min(gap, +e.hours); out.set(e.id, +h.toFixed(2)); gap -= h;
+    }
+  }
+  return out;
+}
+function paintWarnings() {
+  const u = unlogged();
+  for (const s of document.querySelectorAll('[data-aw]')) {
+    const h = u.get(s.dataset.aw);
+    s.innerHTML = h ? `<button class="aw" data-push="${s.dataset.aw}" title="${fmt(h)} h non ancora caricate su Azure DevOps: clic per caricarle">⚠</button>` : '';
+  }
+  return u;
+}
+// aggiunge al Completed Work del task le ore scoperte di una riga e le scala dal Remaining Work, se c'è
+async function pushHours(id) {
+  const e = find(id);
+  if (!pat) return toast('Collega prima Azure DevOps (pulsante DevOps ⟳)');
+  try {
+    await fetchItems([e.task], true); // valori freschi: in cache possono essere vecchi
+    const h = paintWarnings().get(id); if (!h) return toast('Queste ore risultano già su Azure DevOps');
+    const w = wi(e.task), done = w.completed ?? 0, rem = w.remaining, left = rem == null ? null : Math.max(0, +(rem - h).toFixed(2));
+    if (!confirm(`Carico su Azure DevOps ${fmt(h)} h del ${shortDate(e.date)}\nTask ${e.task} — ${w.title}\n\nCompleted Work: ${fmt(done)} → ${fmt(done + h)}` +
+      (rem == null ? '\nRemaining Work: non valorizzato, resta com\'è' : `\nRemaining Work: ${fmt(rem)} → ${fmt(left)}`))) return;
+    // test su /rev: se qualcuno ha modificato il task nel frattempo la PATCH fallisce invece di sovrascrivere
+    const ops = [{op:'test', path:'/rev', value:w.rev}, {op:'add', path:`/fields/${CW}`, value:+(done + h).toFixed(2)}];
+    if (rem != null) ops.push({op:'add', path:`/fields/${RW}`, value:left});
+    cacheItem(await adoFetch(`_apis/wit/workitems/${e.task}`, ops, 'PATCH'));
+    data.ado.pushed.push({task:e.task, date:e.date, at:today(), hours:h});
+    save(); paintWarnings(); toast(`Caricate ${fmt(h)} h sul task ${e.task}`);
+  } catch (err) { adoError(err); }
+}
+// a ogni apertura: ore e titoli aggiornati di tutti i task del diario, poi import delle ore nuove
+async function adoRefresh() {
+  try { await fetchItems(data.entries.map(e => e.task), true); } catch (err) { return adoError(err); }
+  await adoSync();
+}
+async function askPat() {
+  const v = prompt('Per titoli, US e ore dei task serve un Personal Access Token di Azure DevOps\n(dev.azure.com/NetaSaasPoc → User settings → Personal access tokens, scope: Work Items → Read & write).\n\nResta salvato solo in questo browser, non in attivita.json.');
+  if (v?.trim()) { pat = v.trim(); await kv('readwrite', s => s.put(pat, 'pat')); }
+  $('ado').classList.toggle('primary', !pat);
+  return !!pat;
+}
+async function adoStart() {
+  pat = await kv('readonly', s => s.get('pat')).catch(() => null);
+  // senza PAT lo chiedo subito, una volta per apertura: senza non arrivano né titoli né ore
+  if (!pat && !await askPat()) return setStatus('DevOps non collegato', 'err');
+  $('ado').classList.remove('primary');
+  adoRefresh();
+}
+$('ado').onclick = async ev => {
+  if ((!pat || ev.shiftKey) && !await askPat()) return;
+  adoRefresh();
+};
+
+// ---------- toast ----------
+let toastTimer, toastAct;
+function toast(msg, undoable, action) {
+  const a = action ?? (undoable && {label:'Annulla', fn:undo});
+  $('toastMsg').textContent = msg; $('toastUndo').hidden = !a; toastAct = a?.fn; if (a) $('toastUndo').textContent = a.label;
+  $('toast').classList.add('show'); clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('toast').classList.remove('show'), a ? 8000 : 3000);
+}
+$('toastUndo').onclick = () => { $('toast').classList.remove('show'); toastAct?.(); };
+</script>
+</body>
+</html>

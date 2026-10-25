@@ -1,0 +1,4 @@
+# File di dati personali: restano sul PC, mai nel repo
+*.json
+*.xlsx
+*.csv
