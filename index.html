@@ -69,6 +69,12 @@
   .hs-bar u { position:absolute; top:-3px; width:2px; height:14px; background:var(--fg); opacity:.5; transform:translateX(-1px); }
   .link { color:var(--accent); padding:0; text-decoration:underline; }
   .kpis { display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .sp-head { width:100%; display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; padding:9px 14px; margin:10px 0 8px; border-radius:10px; background:var(--accent-soft); text-align:left; }
+  .sp-head b { font-size:15px; } .sp-head > span { color:var(--muted); font-size:13px; }
+  .sp-head .sp-sum { margin-left:auto; font-variant-numeric:tabular-nums; } .sp-head em { color:var(--warn); font-style:normal; font-weight:600; }
+  button.sp-head:hover { box-shadow:inset 0 0 0 1px var(--accent); }
+  button.sp-head[aria-expanded=false] { background:var(--card); border:1px solid var(--line); }
+  .sp-car { color:var(--accent); width:12px; }
   .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 16px; min-width:150px; text-align:left; box-shadow:var(--shadow); }
   .kpi b { display:block; font-size:22px; font-weight:650; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
   .kpi span { color:var(--muted); font-size:12px; }
@@ -489,10 +495,7 @@ function heroHtml() {
     ? `<button class="hero-sp none" data-sprint-chart="${data.sprints.indexOf(next)}">Nessuno sprint in corso · prossimo: <b>${esc(next.name)}</b> da ${shortDate(next.start)}</button>`
     : `<div class="hero-sp none">Nessuno sprint in corso · <button class="link" data-sprints>definiscine uno</button></div>`;
   if (s) {
-    const days = [];
-    for (let d = s.start; d <= s.end; d = addDays(d, 1)) days.push(dayInfo(parseIso(d)));
-    const work = days.filter(i => !i.we && !i.hol), cap = work.length * H, left = work.filter(i => i.k > k).length;
-    const reg = days.reduce((t, i) => t + i.es.reduce((x, e) => x + rowHours(e), 0), 0), elapsed = work.filter(i => i.k <= k).length * H;
+    const {days, work, cap, reg} = sprintStats(s), left = work.filter(i => i.k > k).length, elapsed = work.filter(i => i.k <= k).length * H;
     sp = `<button class="hero-sp" data-sprint-chart="${data.sprints.indexOf(s)}" title="Apri i grafici dello sprint">
       <span class="hs-top"><b>${esc(s.name)}</b><span>${shortDate(s.start)} – ${shortDate(s.end)}</span></span>
       <span class="hs-meta">Giorno ${days.findIndex(i => i.k === k) + 1} di ${days.length} · ${left} ${left === 1 ? 'giorno lavorativo rimasto' : 'giorni lavorativi rimasti'}</span>
@@ -523,11 +526,35 @@ function totHtml(tot) {
   if (!tot) return '';
   return `<span class="bar ${tot > H ? 'over' : tot === H ? 'full' : ''}"><i style="width:${Math.min(100, tot / H * 100)}%"></i></span>${fmt(tot)} h`;
 }
+function sprintStats(s) {
+  const days = [];
+  for (let d = s.start; d <= s.end; d = addDays(d, 1)) days.push(dayInfo(parseIso(d)));
+  const work = days.filter(i => !i.we && !i.hol);
+  return {days, work, cap: work.length * H, reg: days.reduce((t, i) => t + i.es.reduce((x, e) => x + rowHours(e), 0), 0), miss: days.filter(i => i.missing).length};
+}
+// sprint passati compressi, salvo quelli aperti a mano (per browser: è una comodità di vista, non un dato)
+let spOpen;
+try { spOpen = new Set(JSON.parse(localStorage.getItem('sprintOpen') || '[]')); } catch { spOpen = new Set(); }
+const isCollapsed = s => s.end < today() && !spOpen.has(s.start);
+function toggleSprint(start, open = !spOpen.has(start)) {
+  open ? spOpen.add(start) : spOpen.delete(start);
+  try { localStorage.setItem('sprintOpen', JSON.stringify([...spOpen])); } catch {}
+}
+function sprintHead(s) {
+  const k = today(), past = s.end < k, open = !isCollapsed(s), {cap, reg, miss} = sprintStats(s);
+  const state = past ? '' : s.start <= k ? '<span class="chip sprint">in corso</span>' : '<span class="chip">futuro</span>';
+  const inner = `<b>${esc(s.name)}</b><span>${shortDate(s.start)} – ${shortDate(s.end)}</span>${state}<span class="sp-sum">${fmt(reg) || 0} / ${cap} h${miss ? ` · <em>${miss} da compilare</em>` : ''}</span>`;
+  // solo i passati si comprimono: quello in corso e i futuri restano sempre aperti
+  return past ? `<button class="sp-head" data-sptoggle="${s.start}" aria-expanded="${open}" title="${open ? 'Comprimi' : 'Espandi'} lo sprint"><span class="sp-car">${open ? '▾' : '▸'}</span>${inner}</button>`
+    : `<div class="sp-head">${inner}</div>`;
+}
 function diary() {
-  let h = '', weBuf = [];
+  let h = '', weBuf = [], cur = null;
   const flush = () => { if (weBuf.length) h += `<div class="we-strip">${weBuf.join(' · ')}</div>`; weBuf = []; };
   for (const d of monthDays(...ym)) {
-    const i = dayInfo(d);
+    const i = dayInfo(d), s = sprintOf(i.k) ?? null;
+    if (s !== cur) { flush(); cur = s; if (s) h += sprintHead(s); }
+    if (s && isCollapsed(s)) continue;
     if (i.we && !i.es.length) { weBuf.push(`${DOW[d.getDay()]} ${d.getDate()}`); continue; }
     flush(); h += dayCard(i);
   }
@@ -738,6 +765,7 @@ function scrollToDay(k, smooth = true, id) {
   if (query) { query = ''; $('q').value = ''; }
   view = 'diary';
   if (y !== ym[0] || m - 1 !== ym[1]) ym = [y, m - 1];
+  const s = sprintOf(k); if (s && isCollapsed(s)) toggleSprint(s.start, true); // il giorno cercato deve essere visibile
   render();
   const el = id ? document.querySelector(`.row[data-id="${id}"]`) : $('d-' + k);
   el?.scrollIntoView({block:'center', behavior: smooth ? 'smooth' : 'auto'});
@@ -777,6 +805,7 @@ $('content').addEventListener('click', ev => {
   const ds = t.dataset;
   if (ds.add) { $('qDate').value = ds.add; $('qAct').focus(); $('qAct').select(); }
   else if (ds.del) { const e = find(ds.del); mutate(() => data.entries.splice(data.entries.indexOf(e), 1), `Eliminata “${e.activity.slice(0, 40)}”`); render(); }
+  else if (ds.sptoggle) { toggleSprint(ds.sptoggle); render(); }
   else if (ds.dup) duplicate(ds.dup);
   else if (ds.move) pickDay(ds.move, t);
   else if (ds.absent) addAbsence(ds.date, ds.absent);
