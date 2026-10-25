@@ -240,7 +240,16 @@
   .gate { min-height:100vh; display:grid; place-items:center; padding:16px; }
   .gate .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:32px; max-width:440px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.08); }
   .gate h2 { margin:0 0 8px; } .gate p { color:var(--muted); margin:0 0 20px; }
-  .gate .primary { width:100%; margin-bottom:8px; padding:10px; }
+  .gate .primary { width:100%; margin-bottom:12px; padding:10px; }
+  .choice { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .gate .card { max-width:640px; }
+  .fld { display:grid; grid-template-columns:70px 1fr; gap:8px; align-items:center; margin-bottom:8px; font-size:13px; color:var(--muted); }
+  #status { cursor:pointer; } #status:hover { color:var(--accent); }
+  .opt-card { display:flex; flex-direction:column; gap:4px; padding:14px; border:1px solid var(--line); border-radius:12px; text-align:left; background:var(--bg); }
+  .opt-card:hover { border-color:var(--accent); background:var(--accent-soft); }
+  .opt-card span { color:var(--muted); font-size:13px; }
+  .gate .hint { font-size:12px; margin:14px 0 0; }
+  @media (max-width: 520px) { .choice { grid-template-columns:1fr; } }
   kbd { font:11px "Cascadia Mono",Consolas,monospace; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:0 4px; color:var(--muted); }
   .help { margin-top:24px; font-size:12px; color:var(--faint); display:flex; gap:16px; flex-wrap:wrap; }
 
@@ -261,9 +270,14 @@
 <div class="gate" id="gate">
   <div class="card">
     <h2>Riepilogo attività</h2>
-    <p>I dati stanno in <b>attivita.json</b>, nella tua cartella OneDrive: la pagina lo legge e lo salva lì, non li invia altrove.</p>
+    <p>Le attività stanno in un file <b>attivita.json</b>: sul tuo PC o in un tuo repo GitHub privato. La pagina lo legge e lo salva lì, non lo invia altrove.</p>
     <button class="primary" id="reopen" hidden>Riapri attivita.json</button>
-    <button class="btn" id="open" style="width:100%;padding:10px">Scegli il file…</button>
+    <div class="choice">
+      <button class="opt-card" id="open"><b>Ho già un file</b><span>Apri il tuo attivita.json dal PC</span></button>
+      <button class="opt-card" id="create"><b>Parto da zero</b><span>Crea un file nuovo sul PC: la prima sync con Azure DevOps recupera le ore dei tuoi task dall'inizio dell'anno</span></button>
+      <button class="opt-card" id="gh"><b>Su GitHub</b><span>In un tuo repo privato: niente file da scegliere, lo ritrovi su ogni PC e browser</span></button>
+    </div>
+    <p class="hint">Sul PC, tienilo nella cartella OneDrive: così lo ritrovi su ogni PC.</p>
   </div>
 </div>
 
@@ -281,7 +295,7 @@
     <button class="btn" id="export" title="Esporta per settimana, mese o sprint">Esporta</button>
     <button class="btn" id="ado">⟳ Sync Azure DevOps</button>
     <label class="search"><input id="q" type="search" placeholder="Cerca attività, task, note…  ( / )"></label>
-    <span id="status">Pronto</span>
+    <button id="status">Pronto</button>
   </header>
   <div class="layout">
     <aside id="side"></aside>
@@ -311,6 +325,17 @@
 </div>
 <div class="ac" id="ac" hidden></div>
 <input type="date" id="movePick" tabindex="-1" aria-hidden="true">
+<dialog id="dlgGh"><form method="dialog" id="fGh">
+  <h3>Archivio su GitHub</h3>
+  <p class="sub">Serve un tuo repo <b>privato</b> (anche vuoto) e un <i>fine-grained token</i> con accesso solo a quel repo e permesso
+    <b>Contents: Read and write</b> — <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">crealo qui</a>.
+    Il token resta in questo browser; la pagina pubblica non contiene dati.</p>
+  <label class="fld">Repo <input name="repo" placeholder="utente/riepilogo-dati" required pattern="[\w.\-]+/[\w.\-]+"></label>
+  <label class="fld">File <input name="path" value="attivita.json"></label>
+  <label class="fld">Token <input name="token" type="password" required autocomplete="off" placeholder="github_pat_…"></label>
+  <p class="sub" id="ghMsg" aria-live="polite"></p>
+  <div class="dl-foot"><button class="btn" value="cancel" formnovalidate>Annulla</button><button class="primary" value="ok">Collega</button></div>
+</form></dialog>
 <dialog id="dlgSprint"><form method="dialog">
   <h3>Sprint</h3>
   <p class="sub">Le finestre arrivano dalle iterazioni di Azure DevOps a ogni sincronizzazione. Accanto, le iterazioni dei task su cui hai lavorato in quei giorni.</p>
@@ -330,7 +355,7 @@
 const H = 8;
 const DOW = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 const MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-let data, handle, lastMod = 0, view = 'diary', query = '', undoStack = [], saveTimer, saving = false, byDate, sugg;
+let data, store, ver, view = 'diary', query = '', undoStack = [], saveTimer, saving = false, byDate, sugg;
 let ym = [new Date().getFullYear(), new Date().getMonth()];
 
 // codici di assenza: provvisori, da sostituire con l'elenco ufficiale
@@ -436,15 +461,60 @@ function kv(mode, fn) {
     r.onsuccess = () => { const tx = r.result.transaction('kv', mode), q = fn(tx.objectStore('kv')); tx.oncomplete = () => res(q.result); tx.onerror = () => rej(tx.error); };
   });
 }
-async function load(h) {
-  if (await h.requestPermission({mode:'readwrite'}) !== 'granted') return;
-  const f = await h.getFile();
-  data = migrated(JSON.parse(await f.text())); handle = h; lastMod = f.lastModified; base = JSON.stringify(data);
-  await kv('readwrite', s => s.put(h, 'file'));
+// ---------- archivio: file sul PC o repo GitHub privato ----------
+// Due versioni con la stessa forma: read() → {text, ver}, null se il file non esiste ancora;
+// write(text, ver) → nuova ver, oppure eccezione {conflict:true} se nel frattempo è cambiato altrove.
+const fileStore = h => ({
+  kind: 'file', label: `il file ${h.name} sul PC`,
+  async read() { const f = await h.getFile(); return {text: await f.text(), ver: f.lastModified}; },
+  async write(text, v) {
+    if ((await h.getFile()).lastModified > v) throw {conflict: true};
+    const w = await h.createWritable(); await w.write(text); await w.close();
+    return (await h.getFile()).lastModified;
+  },
+});
+// GitHub: API "contents" del repo privato. La versione è lo sha del file: GitHub rifiuta (409) una scrittura
+// fatta su uno sha vecchio, quindi i conflitti fra PC li rileva lui.
+// ponytail: l'API contents restituisce il contenuto fino a 1 MB (oggi il file è ~150 KB); oltre serve la lettura "raw"
+const b64enc = s => { const b = new TextEncoder().encode(s); let r = ''; for (let i = 0; i < b.length; i += 0x8000) r += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(r); };
+const b64dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0)));
+function ghStore({repo, path, token}) {
+  const url = `https://api.github.com/repos/${repo}/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
+  const req = async (method, body) => {
+    // no-store: l'API GitHub si fa tenere in cache per 60 secondi, e leggerei una versione vecchia
+    const r = await fetch(url, {method, cache: 'no-store', headers: {Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json'}, body: body && JSON.stringify(body)});
+    if (r.status === 401) throw new Error('token GitHub non valido o scaduto');
+    if (r.status === 403) throw new Error(`il token GitHub non ha il permesso Contents: Read and write su ${repo}`);
+    return r;
+  };
+  return {
+    kind: 'github', label: `il repo GitHub ${repo} (${path})`,
+    async read() {
+      const r = await req('GET'); if (r.status === 404) return null;
+      if (!r.ok) throw new Error(`GitHub HTTP ${r.status}`);
+      const j = await r.json(); return {text: b64dec(j.content), ver: j.sha};
+    },
+    async write(text, v) {
+      const r = await req('PUT', {message: `Riepilogo attività: aggiornamento del ${new Date().toLocaleString('it-IT')}`, content: b64enc(text), ...(v && {sha: v})});
+      if (r.status === 409 || r.status === 422) throw {conflict: true}; // sha vecchio, o mancante su un file che esiste già
+      if (!r.ok) throw new Error(`GitHub HTTP ${r.status}`);
+      return (await r.json()).content.sha;
+    },
+  };
+}
+async function openStore(s, remember) {
+  const c = await s.read();
+  data = migrated(JSON.parse(c.text)); store = s; ver = c.ver; base = JSON.stringify(data);
+  await remember?.();
+  $('status').title = `Dati salvati su ${s.label} · clic per cambiare archivio`;
   $('gate').hidden = true; $('app').hidden = false;
   $('qDate').value = today();
   render(); scrollToDay(today(), false);
   adoStart();
+}
+async function load(h) {
+  if (await h.requestPermission({mode:'readwrite'}) !== 'granted') return;
+  openStore(fileStore(h), () => kv('readwrite', s => { s.put(h, 'file'); return s.delete('gh'); }));
 }
 // base = il file come l'ho letto o scritto l'ultima volta: confrontandolo con data so cosa ho cambiato io
 let base;
@@ -467,36 +537,97 @@ function merge(b, local, disk) {
 function save() {
   setStatus('Salvataggio…', 'busy'); saving = true;
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(async () => {
-    try {
-      // il file può essere cambiato da un altro PC o da un'altra scheda: unisco invece di sovrascrivere
-      const f = await handle.getFile();
-      if (f.lastModified > lastMod) {
-        data = merge(JSON.parse(base), data, migrated(JSON.parse(await f.text())));
-        undoStack = []; reindex(); render(); toast('Il file era stato modificato altrove: ho unito le modifiche');
-      }
-      const json = JSON.stringify(data, null, 1);
-      const w = await handle.createWritable(); await w.write(json); await w.close();
-      lastMod = (await handle.getFile()).lastModified; base = JSON.stringify(data);
-      setStatus('Salvato alle ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'}));
-    } catch (err) { setStatus('Errore di salvataggio', 'err'); toast('Salvataggio non riuscito: ' + err.message); }
-    saving = false;
-  }, 300);
+  // su GitHub ogni scrittura è un commit: aspetto qualche secondo di calma per raggruppare le modifiche
+  saveTimer = setTimeout(flush, store.kind === 'github' ? 5000 : 300);
+}
+async function flush() {
+  clearTimeout(saveTimer); saveTimer = null;
+  try {
+    try { ver = await store.write(JSON.stringify(data, null, 1), ver); }
+    catch (err) {
+      if (!err.conflict) throw err;
+      // cambiato altrove (altro PC, altra scheda): unisco le modifiche invece di sovrascrivere
+      const cur = await store.read();
+      data = merge(JSON.parse(base), data, migrated(JSON.parse(cur.text)));
+      undoStack = []; reindex(); render(); toast('I dati erano stati modificati altrove: ho unito le modifiche');
+      ver = await store.write(JSON.stringify(data, null, 1), cur.ver);
+    }
+    base = JSON.stringify(data);
+    setStatus('Salvato alle ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'}));
+  } catch (err) { setStatus('Errore di salvataggio', 'err'); toast('Salvataggio non riuscito: ' + (err.message ?? err)); }
+  saving = !!saveTimer; // un'altra modifica arrivata mentre scrivevo resta in attesa
 }
 const setStatus = (t, cls = '') => { $('status').textContent = t; $('status').className = cls; };
-$('open').onclick = async () => { const [h] = await showOpenFilePicker({types:[{description:'Attività', accept:{'application/json':['.json']}}]}); load(h); };
-kv('readonly', s => s.get('file')).then(async h => {
+const JSON_TYPE = [{description:'Riepilogo attività', accept:{'application/json':['.json']}}];
+$('open').onclick = async () => { const [h] = await showOpenFilePicker({types:JSON_TYPE}); load(h); };
+// "Parto da zero": il browser chiede dove salvare il file nuovo, che nasce vuoto
+$('create').onclick = async () => {
+  let h;
+  try { h = await showSaveFilePicker({suggestedName:'attivita.json', types:JSON_TYPE}); } catch { return; } // finestra annullata
+  // se nella finestra si sceglie un file che esiste già, non lo azzero senza chiedere
+  const old = await h.getFile();
+  if (old.size) {
+    const n = await old.text().then(t => JSON.parse(t).entries?.length).catch(() => undefined);
+    if (n !== undefined) { if (confirm(`Questo file contiene già un riepilogo con ${n} righe.\nLo apro così com'è invece di sovrascriverlo?`)) load(h); return; }
+    if (!confirm('Il file scelto non è vuoto e non è un riepilogo attività. Sovrascriverlo?')) return;
+  }
+  const w = await h.createWritable(); await w.write(JSON.stringify({version:1, entries:[]}, null, 1)); await w.close();
+  load(h);
+};
+// All'avvio riapro l'ultimo archivio: GitHub senza chiedere niente; il file da solo solo se il browser
+// ha già il permesso ("Consenti a ogni visita"), altrimenti vuole un clic
+Promise.all([kv('readonly', s => s.get('gh')), kv('readonly', s => s.get('file'))]).then(async ([gh, h]) => {
+  if (gh) return openStore(ghStore(gh)).catch(err => { $('ghMsg').textContent = ''; toast('GitHub: ' + err.message); });
   if (!h) return;
-  // se il permesso è già concesso ("Consenti a ogni visita") il file si apre da solo; altrimenti il browser vuole un clic
   if (await h.queryPermission({mode:'readwrite'}) === 'granted') return load(h);
   $('reopen').hidden = false; $('reopen').onclick = () => load(h); $('reopen').focus();
 }).catch(() => {});
-// il file può essere cambiato da un altro PC via OneDrive: al rientro sulla pagina lo rileggo
+// uscendo dalla pagina salvo subito, senza aspettare; rientrando rileggo, perché un altro PC può aver salvato
 document.addEventListener('visibilitychange', async () => {
-  if (document.hidden || !handle || saving) return;
-  const f = await handle.getFile();
-  if (f.lastModified > lastMod) { data = migrated(JSON.parse(await f.text())); lastMod = f.lastModified; base = JSON.stringify(data); undoStack = []; render(); toast('Il file era cambiato: ricaricato'); }
+  if (!store) return;
+  if (document.hidden) { if (saveTimer) flush(); return; }
+  if (saving) return;
+  const c = await store.read().catch(() => null);
+  if (c && c.ver !== ver) { data = migrated(JSON.parse(c.text)); ver = c.ver; base = JSON.stringify(data); undoStack = []; render(); toast('I dati erano cambiati: ricaricati'); }
 });
+// chiudendo con un salvataggio ancora in corso il browser chiede conferma
+window.addEventListener('beforeunload', ev => { if (saving) ev.preventDefault(); });
+// archivio su GitHub: repo privato tuo + fine-grained token limitato a quel repo
+$('gh').onclick = () => { $('ghMsg').textContent = ''; $('dlgGh').showModal(); };
+$('fGh').onsubmit = async ev => {
+  if (ev.submitter?.value !== 'ok') return;
+  ev.preventDefault(); // il dialogo resta aperto finché il collegamento non riesce
+  const f = $('fGh'), cfg = {repo: f.repo.value.trim(), path: f.path.value.trim() || 'attivita.json', token: f.token.value.trim()};
+  const msg = t => { $('ghMsg').textContent = t; };
+  try {
+    msg('Controllo il repo…');
+    const r = await fetch(`https://api.github.com/repos/${cfg.repo}`, {cache: 'no-store', headers: {Authorization: `Bearer ${cfg.token}`}});
+    if (r.status === 401) throw new Error('token non valido');
+    if (r.status === 404) throw new Error('repo non trovato, oppure il token non ha accesso a questo repo');
+    if (!r.ok) throw new Error(`GitHub HTTP ${r.status}`);
+    // ore e assenze (malattia compresa): su un repo pubblico li vedrebbe chiunque
+    if (!(await r.json()).private) throw new Error('il repo è pubblico: per questi dati serve un repo privato');
+    const s = ghStore(cfg);
+    if (!await s.read()) {
+      // file non ancora nel repo: ci porto il riepilogo aperto adesso, o un file del PC, o parto vuoto
+      let text = JSON.stringify({version: 1, entries: []}, null, 1);
+      if (data && confirm(`Il file ${cfg.path} non c'è ancora nel repo.\nCi copio il riepilogo aperto adesso (${data.entries.length} righe)?`)) text = JSON.stringify(data, null, 1);
+      else if (!data && confirm(`Il file ${cfg.path} non c'è ancora nel repo.\n\nOK = ci carico un attivita.json dal PC\nAnnulla = parto da un riepilogo vuoto`)) {
+        const [h] = await showOpenFilePicker({types: JSON_TYPE}); text = await (await h.getFile()).text(); JSON.parse(text);
+      }
+      msg('Creo il file nel repo…'); await s.write(text, null);
+    }
+    if (saveTimer) await flush(); // eventuali modifiche in sospeso vanno nel vecchio archivio prima di cambiare
+    $('dlgGh').close();
+    await openStore(s, () => kv('readwrite', st => st.put(cfg, 'gh')));
+  } catch (err) { msg('Non riuscito: ' + (err.message ?? err)); }
+};
+// clic sullo stato: dove stanno i dati, e cambio archivio
+$('status').onclick = async () => {
+  if (!store || !confirm(`I dati sono salvati su ${store.label}.\n\nVuoi cambiare archivio?`)) return;
+  if (saveTimer) await flush();
+  $('reopen').hidden = true; $('app').hidden = true; $('gate').hidden = false;
+};
 
 // ---------- modifiche con undo ----------
 function mutate(fn, msg) {
@@ -1085,7 +1216,9 @@ async function adoFind(since) {
   const q = await adoFetch(`${ADO_PRJ}/_apis/wit/wiql`, {query: `SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = 'Task' AND [System.ChangedDate] >= '${since}' AND ([System.AssignedTo] = @Me OR [System.ChangedBy] = @Me)`});
   const ids = q.workItems.map(w => String(w.id));
   // ponytail: una pagina di revisioni per task (200), basta finché un task non ne accumula di più
-  const hist = await Promise.all(ids.map(id => adoFetch(`_apis/wit/workitems/${id}/updates?$top=200`)));
+  // a gruppi di 20: dall'inizio dell'anno i task possono essere centinaia, tutti insieme Azure DevOps rallenta o rifiuta
+  const hist = [];
+  for (let i = 0; i < ids.length; i += 20) hist.push(...await Promise.all(ids.slice(i, i + 20).map(id => adoFetch(`_apis/wit/workitems/${id}/updates?$top=200`))));
   const found = [];
   ids.forEach((id, i) => {
     const perDay = {};
@@ -1118,17 +1251,22 @@ function imports(found, since) {
   data.ado.seen = [...seen];
   return out;
 }
+// Da quando rileggere le ore: l'ultima settimana già vista, per quelle caricate in ritardo. Prima sync: l'ultimo mese
+// se il diario ha già righe (le ha scritte a mano), dall'inizio dell'anno se è un file nuovo e vuoto.
+const syncSince = () => data.ado.syncedTo ? addDays(data.ado.syncedTo, -7) : data.entries.length ? addDays(today(), -30) : today().slice(0, 4) + '-01-01';
 async function adoSync() {
   if (!pat) return;
   setStatus('Azure DevOps…', 'busy');
   try {
-    // rileggo sempre l'ultima settimana già vista, per le ore caricate in ritardo; la prima volta l'ultimo mese
-    const since = data.ado.syncedTo ? addDays(data.ado.syncedTo, -7) : addDays(today(), -30);
+    const since = syncSince();
     const fresh = imports(await adoFind(since), since);
     data.ado.syncedTo = today(); data.ado.syncedAt = new Date().toISOString();
     if (document.activeElement?.closest?.('.row')) commit(document.activeElement);
     fresh.forEach(e => insert(e));
-    if (fresh.length) undoStack = []; // gli snapshot precedenti non hanno le righe importate
+    if (fresh.length) {
+      undoStack = []; // gli snapshot precedenti non hanno le righe importate
+      await adoSprints(); // le finestre dipendono dai task con ore: con un file nuovo arrivano solo adesso
+    }
     save(); render();
     if (fresh.length) toast(`Importate ${fresh.length} righe da Azure DevOps`);
   } catch (err) { adoError(err); }

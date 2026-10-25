@@ -17,7 +17,8 @@ Object.assign(globalThis, {document: stub(), window: stub(), indexedDB: {open: s
 
 let T;
 (function () {
-  eval(src + `;T = {imports, unlogged, merge, migrated, adoSprints, iterHours, reindex,
+  eval(src + `;T = {imports, unlogged, merge, migrated, adoSprints, iterHours, syncSince, today, addDays, reindex, ghStore, b64enc, b64dec,
+    setStore: (s, v, b) => { store = s; ver = v; base = b; }, flush, get data() { return data; },
     use: d => { data = migrated(d); reindex(); return data; }, setFetch: f => { adoFetch = f; }};`);
 })();
 
@@ -117,6 +118,57 @@ await check('conflitto: la data dell\'ultima sync non si perde se una parte non 
   const b = T.migrated(file([])), local = T.migrated(file([])), disk = T.migrated(file([]));
   disk.ado.syncedAt = '2026-10-25T08:00:00.000Z';
   assert.equal(T.merge(b, local, disk).ado.syncedAt, '2026-10-25T08:00:00.000Z');
+});
+
+// ---------- file nuovo ----------
+await check('file nuovo e vuoto: si apre e la prima sync parte dall\'inizio dell\'anno', () => {
+  const d = T.use({version: 1, entries: []});
+  assert.deepEqual([d.sprints, d.ado.seen], [[], []]);
+  assert.equal(T.syncSince(), T.today().slice(0, 4) + '-01-01');
+});
+await check('prima sync con righe già scritte a mano: ultimo mese; poi dall\'ultima sync meno una settimana', () => {
+  const d = T.use(file([E('2026-10-14', '1', 6)]));
+  assert.equal(T.syncSince(), T.addDays(T.today(), -30));
+  d.ado.syncedTo = '2026-10-20';
+  assert.equal(T.syncSince(), '2026-10-13');
+});
+
+// ---------- archivio su GitHub (fetch simulata) ----------
+// finto repo: un file con sha; una PUT con sha diverso da quello attuale risponde 409 come GitHub
+function fakeGitHub(initial) {
+  const repo = {text: initial, sha: initial == null ? null : 'v1', puts: 0};
+  globalThis.fetch = async (url, {method = 'GET', body} = {}) => {
+    const res = (status, json) => ({status, ok: status < 300, json: async () => json});
+    if (method === 'GET') return repo.text == null ? res(404) : res(200, {content: T.b64enc(repo.text), sha: repo.sha});
+    const b = JSON.parse(body);
+    if ((b.sha ?? null) !== repo.sha) return res(repo.sha ? (b.sha ? 409 : 422) : 409);
+    repo.text = T.b64dec(b.content); repo.sha = 'v' + (++repo.puts + 1);
+    return res(200, {content: {sha: repo.sha}});
+  };
+  return repo;
+}
+await check('GitHub: testo con accenti ed emoji sopravvive alla codifica base64', () => {
+  const s = 'Attività · perché ⚠ 😀 ' + 'x'.repeat(70000);
+  assert.equal(T.b64dec(T.b64enc(s)), s);
+});
+await check('GitHub: file assente → null; scrittura e rilettura con lo sha', async () => {
+  const repo = fakeGitHub(null), s = T.ghStore({repo: 'u/r', path: 'attivita.json', token: 't'});
+  assert.equal(await s.read(), null);
+  const v = await s.write('{"version":1,"entries":[]}', null);
+  assert.deepEqual(await s.read(), {text: '{"version":1,"entries":[]}', ver: v});
+  await assert.rejects(s.write('altro', 'sha-vecchio'), e => e.conflict === true);
+  assert.equal(repo.puts, 1);
+});
+await check('GitHub: salvataggio con file cambiato da un altro PC → unisce invece di sovrascrivere', async () => {
+  const a = E('2026-10-01', '1', 1), b = E('2026-10-02', '2', 2);
+  const repo = fakeGitHub(JSON.stringify(file([a])));
+  const s = T.ghStore({repo: 'u/r', path: 'attivita.json', token: 't'});
+  const d = T.use(file([a, b]));                                   // qui ho aggiunto b partendo da [a] (sha v1)
+  T.setStore(s, 'v1', JSON.stringify(T.migrated(file([a]))));
+  repo.text = JSON.stringify(file([a, E('2026-10-03', '3', 3)])); repo.sha = 'v9'; // intanto un altro PC aggiunge una riga
+  await T.flush();
+  assert.deepEqual(JSON.parse(repo.text).entries.map(e => e.task), ['1', '2', '3']);
+  assert.equal(T.data.entries.length, 3);
 });
 
 console.log(`\n${n} controlli superati`);
