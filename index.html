@@ -305,8 +305,18 @@
   .choice { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .opt-card { position:relative; display:flex; flex-direction:column; gap:6px; padding:18px 16px; border:1.5px solid var(--line); border-radius:14px; text-align:left; background:var(--card); }
   .opt-card:hover { border-color:var(--accent); background:var(--accent-soft); }
-  .opt-card b { font-size:15px; } .opt-card span { color:var(--muted); font-size:13px; }
+  .opt-card b { font-size:15px; } .opt-card span { color:var(--muted); font-size:13px; } .opt-card span b { font-size:inherit; color:var(--fg); }
   .opt-card .tag { position:absolute; top:-9px; right:12px; background:var(--accent-bg); color:var(--on-accent); font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; }
+  .feat { list-style:none; padding:0; margin:0 0 16px; display:grid; gap:10px; }
+  .feat li { display:flex; gap:12px; align-items:flex-start; }
+  .feat li > b:first-child { flex:none; width:30px; height:30px; border-radius:9px; display:grid; place-items:center; background:var(--accent-soft); color:var(--accent); }
+  .feat li.no > b:first-child { background:var(--hover); color:var(--muted); }
+  .feat span { color:var(--muted); padding-top:4px; } .feat span b { color:var(--fg); }
+  .tips { margin:0; padding-left:20px; color:var(--muted); } .tips li { margin-bottom:6px; } .tips b { color:var(--fg); }
+  .scopes { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .scopes span { font-size:12px; font-weight:600; padding:2px 9px; border-radius:20px; background:var(--accent-soft); color:var(--accent); }
+  .why { margin:0 0 14px; color:var(--muted); font-size:13px; } .why summary { cursor:pointer; color:var(--accent); } .why p { margin:6px 0 0; }
+  .howto a { color:var(--accent); }
   .wz-alt { margin:16px 0 0; color:var(--muted); font-size:13px; text-align:center; }
   .howto { margin:0 0 16px; padding-left:20px; color:var(--muted); } .howto li { margin-bottom:4px; } .howto b { color:var(--fg); }
   .wz .fld { grid-template-columns:110px 1fr; }
@@ -316,16 +326,15 @@
   .qr svg { display:block; width:100%; height:auto; }
   #dlgStore .dl-foot { flex-wrap:wrap; }
   #fAdo .fld { grid-template-columns:110px 1fr; }
-  #fAdo h3 { font-size:18px; }
   .orgbox { display:grid; gap:6px; min-width:0; } .orgbox select { width:100%; padding:8px 10px; }
   .wz select { border:1px solid var(--line); border-radius:9px; background:var(--bg); color:inherit; font:inherit; }
-  .wz #fAdo h3 { font-size:20px; margin-bottom:10px; }
+  #fAdo h3 { font-size:20px; margin:0 0 6px; }
   .fld { display:grid; grid-template-columns:70px 1fr; gap:8px; align-items:center; margin-bottom:8px; font-size:13px; color:var(--muted); }
   #status { cursor:pointer; } #status:hover { color:var(--accent); }
   .ico { display:inline-flex; align-items:center; gap:6px; } .ico svg { width:16px; height:16px; flex:none; }
   .opt-card .ico svg { width:22px; height:22px; color:var(--accent); }
   @media (max-width: 560px) {
-    .choice { grid-template-columns:1fr; } .wz { padding:22px 18px; } .steps li { font-size:12px; }
+    .choice { grid-template-columns:1fr; } .wz { padding:22px 18px; } .steps { gap:4px; } .steps li { font-size:11px; padding:6px; gap:5px; flex-direction:column; text-align:center; }
     .wz .fld, #fAdo .fld { grid-template-columns:1fr; gap:4px; }
     .dl-foot { flex-wrap:wrap; } .dl-foot .primary { order:-1; flex-basis:100%; padding:10px; }
   }
@@ -377,25 +386,48 @@
 <div class="gate" id="gate">
   <div class="wz">
     <div class="wz-brand"><span class="logo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10.5" r="6.5"/><path d="M10 7v3.5l2.5 1.5M8 2.5h4"/></svg></span><div><b>DevOps Timesheet</b><span>Il diario ore che si compila da Azure DevOps</span></div></div>
-    <ol class="steps"><li data-step="1" class="on"><i>1</i>Dove salvare i dati</li><li data-step="2"><i>2</i>Collega Azure DevOps</li></ol>
+    <ol class="steps"><li data-step="1" class="on"><i>1</i>Benvenuto</li><li data-step="2"><i>2</i>Dati</li><li data-step="3"><i>3</i>DevOps</li><li data-step="4"><i>4</i>Pronto</li></ol>
     <section id="wz1">
+      <h2>Benvenuto in DevOps Timesheet</h2>
+      <p class="sub">Il tuo diario ore che si compila da solo con le ore dei task di Azure DevOps. Ferie, malattie, permessi e attività fuori da DevOps li aggiungi a mano.</p>
+      <ul class="feat">
+        <li><b>⟳</b><span><b>Ore dai task</b>: legge il Completed Work dei tuoi task e lo mette nel giorno giusto.</span></li>
+        <li><b>⇡</b><span><b>Ore verso i task</b>: quelle scritte qui le carichi sui task con un clic.</span></li>
+        <li><b>▦</b><span><b>Mese, sprint e grafici</b>, ed export CSV pronto per Excel.</span></li>
+      </ul>
+      <p class="sub">La configurazione richiede tre passi e circa 5 minuti: dove salvare i dati, il collegamento ad Azure DevOps (puoi farlo anche dopo), e sei pronto.</p>
+      <div class="dl-foot"><button class="primary" type="button" id="wzStart">Inizia →</button></div>
+    </section>
+    <section id="wz2" hidden>
       <div id="wzChoose">
         <h2>Dove salvo i tuoi dati?</h2>
-        <p class="sub">Ore e assenze finiscono in un file <b>attivita.json</b> tuo. Nessun server: la pagina lo legge e lo salva solo lì.</p>
+        <p class="sub">Ore e assenze finiscono in un file <b>attivita.json</b> tuo. Non c'è nessun server: la pagina legge e salva solo lì.</p>
         <button class="primary wide" id="reopen" hidden>Riapri attivita.json</button>
         <button class="btn wide" id="back" hidden>← Torna all'app senza cambiare</button>
         <div class="choice">
-          <button class="opt-card" id="gh"><span class="tag">Consigliato</span><b class="ico"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>In un repo GitHub privato</b><span>Lo ritrovi su ogni PC e sul telefono, senza scegliere file.</span></button>
-          <button class="opt-card" id="create"><b class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M1.5 3.5h4.5l1.5 1.5h7v8h-13z"/></svg>In un file sul PC</b><span>Scegli dove crearlo, ad esempio in OneDrive. Serve Chrome o Edge.</span></button>
+          <button class="opt-card" id="gh"><span class="tag">Consigliato</span><b class="ico"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Repo GitHub privato</b><span>Funziona su ogni PC <b>e sul telefono</b>. Serve un account GitHub (gratis).</span></button>
+          <button class="opt-card" id="pcCard"><b class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M4.5 12.5h7.5a3 3 0 0 0 .4-6A4 4 0 0 0 4.7 5.6 3.5 3.5 0 0 0 4.5 12.5z"/></svg>OneDrive o cartella del PC</b><span>Un file nella cartella OneDrive, sincronizzato tra i tuoi PC. <b>Solo da PC</b>, con Chrome o Edge.</span></button>
         </div>
-        <p class="wz-alt">Hai già un attivita.json? <button class="link" id="open">Aprilo dal PC</button></p>
+        <p class="wz-alt">Hai già un attivita.json sul PC? <button class="link" id="open2">Aprilo</button></p>
+        <div class="dl-foot" id="wzChooseFoot"><button class="btn" type="button" data-wz="1">← Indietro</button></div>
+      </div>
+      <div id="wzPc" hidden>
+        <h2>File nella cartella OneDrive</h2>
+        <ol class="howto">
+          <li>Controlla che <b>OneDrive</b> sia attivo sul PC (l'icona della nuvola vicino all'orologio). Va bene anche una cartella qualsiasi, ma allora il file resta solo su quel PC.</li>
+          <li>Premi <b>Crea il file</b> e salvalo dentro la cartella OneDrive, ad esempio <i>OneDrive › Documenti › attivita.json</i>.</li>
+          <li>Il browser chiede il permesso di modificare il file: scegli <b>Consenti</b>, meglio se <i>a ogni visita</i>, così non te lo richiede più.</li>
+          <li>Sugli altri PC apri lo stesso file con <b>Apri un file esistente</b>. Sul telefono questa scelta non funziona: lì serve GitHub.</li>
+        </ol>
+        <div class="dl-foot"><button class="btn" type="button" data-wzback>← Indietro</button><button class="btn" type="button" id="open">Apri un file esistente</button><button class="primary" type="button" id="create">Crea il file</button></div>
       </div>
       <form id="fGh" autocomplete="off" hidden>
-        <h2>Collega il repo GitHub</h2>
+        <h2>Archivio su GitHub</h2>
         <ol class="howto">
-          <li>Crea su GitHub un repo <b>privato</b>, anche vuoto.</li>
-          <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Crea un token</a> <i>fine-grained</i> con accesso solo a quel repo e permesso <b>Contents: Read and write</b>.</li>
-          <li>Incolla qui repo e token: il token resta in questo browser.</li>
+          <li>Crea un repo <b>privato</b>: apri <a href="https://github.com/new" target="_blank" rel="noopener">github.com/new</a>, nome ad esempio <i>timesheet-dati</i>, visibilità <b>Private</b>, poi <b>Create repository</b>. Può restare vuoto.</li>
+          <li>Crea un token: apri <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Fine-grained tokens → Generate new token</a>.
+            In <b>Repository access</b> scegli <i>Only select repositories</i> e il repo appena creato; in <b>Permissions → Repository permissions</b> metti <b>Contents</b> su <i>Read and write</i>. Poi <b>Generate token</b> e copialo.</li>
+          <li>Scrivi qui sotto il repo (<i>tuo-utente/timesheet-dati</i>) e incolla il token. Il token resta in questo browser e serve solo per quel repo.</li>
         </ol>
         <label class="fld">Repo <input name="repo" placeholder="utente/timesheet-dati" required pattern="[\w.\-]+/[\w.\-]+"></label>
         <label class="fld">File <input name="path" value="attivita.json"></label>
@@ -409,10 +441,39 @@
             <button type="button" class="btn" data-ghinit="empty">Un diario vuoto</button>
           </div>
         </div>
-        <div class="dl-foot"><button class="btn" type="button" id="ghBack">← Indietro</button><button class="primary" value="ok" id="ghGo">Collega</button></div>
+        <div class="dl-foot"><button class="btn" type="button" id="ghBack">← Indietro</button><button class="primary" value="ok" id="ghGo">Collega il repo</button></div>
       </form>
     </section>
-    <section id="wz2" hidden></section>
+    <section id="wz3" hidden><form id="fAdo" autocomplete="off">
+  <h3>Collega Azure DevOps</h3>
+  <p class="sub">Così le ore che registri sui task arrivano da sole nel diario. Serve un <b>Personal Access Token</b>: una specie di password limitata che crei tu e puoi revocare quando vuoi.</p>
+  <ol class="howto">
+    <li>Apri <a href="https://dev.azure.com" target="_blank" rel="noopener">dev.azure.com</a>, clicca in alto a destra l'icona <b>User settings</b> (omino con l'ingranaggio) → <b>Personal access tokens</b> → <b>+ New Token</b>.</li>
+    <li>Compila così: <b>Name</b> <i>DevOps Timesheet</i>; <b>Organization</b> <i>All accessible organizations</i>; <b>Expiration</b> fino a un anno; <b>Scopes</b> <i>Custom defined</i>. Poi, con <i>Show all scopes</i>, spunta:
+      <span class="scopes"><span>Work Items · Read &amp; write</span><span>Project and Team · Read</span><span>User Profile · Read</span></span></li>
+    <li>Premi <b>Create</b> e <b>copia il token</b>: Azure DevOps lo mostra una volta sola.</li>
+    <li>Incollalo qui sotto: compaiono le tue organizzazioni e poi i progetti da spuntare.</li>
+  </ol>
+  <details class="why"><summary>Perché questi permessi?</summary>
+    <p><b>Work Items</b> per leggere le ore dei task e caricare quelle scritte qui; <b>Project and Team</b> per mostrarti l'elenco dei progetti; <b>User Profile</b> per mostrarti l'elenco delle organizzazioni. Il token non va su nessun server: resta in questo browser (e, con l'archivio GitHub, nel tuo repo privato).</p></details>
+  <label class="fld">Token <input name="pat" type="password" required autocomplete="off" placeholder="Incolla qui il Personal Access Token"></label>
+  <label class="fld">Organizzazione <span class="orgbox"><select name="orgSel" hidden></select><input name="org" required placeholder="compare dopo il token, o scrivila tu" autocomplete="off"></span></label>
+  <label class="fld">Progetti <input name="projects" required placeholder="Progetto A, Progetto B" autocomplete="off"></label>
+  <div id="adoPrj"></div>
+  <p class="sub" id="adoMsg" aria-live="polite"></p>
+  <div class="dl-foot"><button class="btn" type="button" id="adoSkip">Salta, lo faccio dopo</button><button class="btn" type="button" id="adoLoad">Elenca progetti</button><button class="primary" value="ok" id="adoGo">Collega</button></div>
+</form></section>
+    <section id="wz4" hidden>
+      <h2>Tutto pronto</h2>
+      <ul class="feat" id="wzSummary"></ul>
+      <p class="sub" style="margin-top:14px"><b>Qualche consiglio per iniziare</b></p>
+      <ul class="tips">
+        <li>Le ore dei task arrivano da sole a ogni apertura; puoi anche premere <b>Sincronizza</b> nel riquadro Azure DevOps.</li>
+        <li>Ferie, malattie e permessi: in ogni giorno c'è il menu <b>＋ Assenza</b>.</li>
+        <li>Sul telefono: apri la pagina con Chrome e scegli <b>Installa app</b>. Con l'archivio GitHub lo colleghi da <b>Impostazioni → Collega un altro dispositivo</b>.</li>
+      </ul>
+      <div class="dl-foot"><button class="primary" type="button" id="wzGo">Apri il diario →</button></div>
+    </section>
   </div>
 </div>
 
@@ -483,19 +544,7 @@
   </div>
   <div class="dl-foot"><button class="btn" type="button" id="stQrBtn">Collega un altro dispositivo</button><button class="btn" type="button" id="stChange">Cambia archivio</button><button class="primary" value="ok">Chiudi</button></div>
 </form></dialog>
-<dialog id="dlgAdo"><form id="fAdo" autocomplete="off">
-  <h3>Collega Azure DevOps</h3>
-  <ol class="howto">
-    <li>Su Azure DevOps apri <b>User settings → Personal access tokens</b> e crea un token per <b>All accessible organizations</b> con i permessi <b>Work Items: Read &amp; write</b>, <b>Project and Team: Read</b> e <b>User Profile: Read</b>.</li>
-    <li>Incolla il token: compaiono le tue organizzazioni e poi i progetti. Spunta quelli da cui leggere le ore.</li>
-  </ol>
-  <label class="fld">Token <input name="pat" type="password" required autocomplete="off" placeholder="Personal Access Token"></label>
-  <label class="fld">Organizzazione <span class="orgbox"><select name="orgSel" hidden></select><input name="org" required placeholder="compare dopo il token, o scrivila tu" autocomplete="off"></span></label>
-  <label class="fld">Progetti <input name="projects" required placeholder="Progetto A, Progetto B" autocomplete="off"></label>
-  <div id="adoPrj"></div>
-  <p class="sub" id="adoMsg" aria-live="polite"></p>
-  <div class="dl-foot"><button class="btn" type="button" id="adoSkip">Annulla</button><button class="btn" type="button" id="adoLoad">Elenca progetti</button><button class="primary" value="ok" id="adoGo">Collega</button></div>
-</form></dialog>
+
 <dialog id="dlgSprint"><form method="dialog">
   <h3>Sprint</h3>
   <p class="sub">Le finestre arrivano dalle iterazioni di Azure DevOps a ogni sincronizzazione. Accanto, le iterazioni dei task su cui hai lavorato in quei giorni.</p>
@@ -674,7 +723,7 @@ async function openStore(s, remember) {
   $('back').hidden = true;
   $('qDate').value = today();
   // primo avvio: secondo passo della procedura, collegare Azure DevOps (salvo averlo già saltato)
-  if (adoOrg() || data.devops.skipped) enterApp(); else wzStep(2);
+  if (adoOrg() || data.devops.skipped) enterApp(); else wzStep(3);
   adoStart();
 }
 async function load(h) {
@@ -684,9 +733,26 @@ async function load(h) {
 // procedura guidata: 1 = dove salvare i dati, 2 = collegare Azure DevOps
 function wzStep(n) {
   $('app').hidden = true; $('gate').hidden = false;
-  $('wz1').hidden = n !== 1; $('wz2').hidden = n !== 2;
+  for (const k of [1, 2, 3, 4]) $('wz' + k).hidden = n !== k;
   document.querySelectorAll('.steps li').forEach(li => { li.classList.toggle('on', +li.dataset.step === n); li.classList.toggle('done', +li.dataset.step < n); });
-  if (n === 1) { $('wzChoose').hidden = false; $('fGh').hidden = true; }
+  if (n === 2) { $('wzChoose').hidden = false; $('fGh').hidden = true; $('wzPc').hidden = true; $('wzChooseFoot').hidden = !$('back').hidden; }
+  window.scrollTo(0, 0);
+}
+// torna all'app da un passo della procedura aperto dall'app (cambio archivio, collegamento DevOps), senza cambiare vista
+const backToApp = () => { $('gate').hidden = true; $('app').hidden = false; };
+$('wzStart').onclick = () => wzStep(2);
+$('gate').addEventListener('click', ev => { const n = ev.target.closest('[data-wz]')?.dataset.wz; if (n) wzStep(+n); });
+$('pcCard').onclick = () => { $('wzChoose').hidden = true; $('wzPc').hidden = false; };
+$('wzPc').querySelector('[data-wzback]').onclick = () => { $('wzPc').hidden = true; $('wzChoose').hidden = false; };
+$('open2').onclick = () => $('open').click();
+// passo 4: riepilogo di cosa è configurato; risolve quando si apre il diario
+function wzDone() {
+  const ok = adoReady();
+  $('wzSummary').innerHTML = `<li><b>✓</b><span><b>Dati</b> salvati su ${esc(store.label)}.</span></li>` + (ok
+    ? `<li><b>✓</b><span><b>Azure DevOps</b> collegato: ${esc(adoOrg())} · ${adoProjects().map(esc).join(', ')}.</span></li>`
+    : `<li class="no"><b>–</b><span><b>Azure DevOps</b> non collegato. Puoi farlo quando vuoi dal riquadro <b>Azure DevOps</b> in basso a sinistra o da <b>Impostazioni</b>: riparti da quel passo.</span></li>`);
+  wzStep(4);
+  return new Promise(res => { $('wzGo').onclick = () => res(); });
 }
 function enterApp() {
   $('gate').hidden = true; $('app').hidden = false;
@@ -759,10 +825,10 @@ const fromLink = linkCfg(location.hash);
 if (location.hash.startsWith('#gh=')) history.replaceState(null, '', location.pathname + location.search);
 (fromLink?.repo && fromLink.token ? kv('readwrite', s => s.put(fromLink, 'gh')) : Promise.resolve())
   .then(() => Promise.all([kv('readonly', s => s.get('gh')), kv('readonly', s => s.get('file'))])).then(async ([gh, h]) => {
-  if (gh) return openStore(ghStore(gh)).catch(err => { $('ghMsg').textContent = ''; wzStep(1); toast('GitHub: ' + err.message); });
+  if (gh) return openStore(ghStore(gh)).catch(err => { $('ghMsg').textContent = ''; wzStep(2); toast('GitHub: ' + err.message); });
   if (!h) return;
   if (await h.queryPermission({mode:'readwrite'}) === 'granted') return load(h);
-  $('reopen').hidden = false; $('reopen').onclick = () => load(h); $('reopen').focus();
+  wzStep(2); $('reopen').hidden = false; $('reopen').onclick = () => load(h); $('reopen').focus();
 }).catch(() => {});
 // uscendo dalla pagina salvo subito, senza aspettare; rientrando rileggo, perché un altro PC può aver salvato
 document.addEventListener('visibilitychange', async () => {
@@ -831,9 +897,9 @@ function openStoreDlg(qr) {
 $('stChange').onclick = async () => {
   $('dlgStore').close();
   if (saveTimer) await flush();
-  $('reopen').hidden = true; $('back').hidden = false; wzStep(1);
+  $('reopen').hidden = true; $('back').hidden = false; wzStep(2);
 };
-$('back').onclick = () => { $('gate').hidden = true; $('app').hidden = false; };
+$('back').onclick = () => { $('back').hidden = true; backToApp(); };
 // il QR lo disegna una libreria esterna, caricata solo quando serve
 $('stQrBtn').onclick = async () => {
   const link = `${location.origin}${location.pathname}#gh=${encodeURIComponent(btoa(JSON.stringify(store.cfg)))}`;
@@ -1151,7 +1217,7 @@ $('content').addEventListener('click', async ev => {
   }
   const a = ev.target.closest('[data-set]')?.dataset.set; if (!a) return;
   if (a === 'sync') adoRefresh();
-  else if (a === 'ado') { if (await adoSetup(false)) { adoBtn(); render(); adoRefresh(); } }
+  else if (a === 'ado') reconnect();
   else if (a === 'qr') openStoreDlg(true);
   else if (a === 'store') $('stChange').click();
   else if (a === 'export') openExport();
@@ -1264,7 +1330,7 @@ $('content').addEventListener('click', ev => {
   else if (ds.sptoggle) { toggleSprint(ds.sptoggle); render(); }
   else if (ds.more) { const r = t.closest('.row'); r.classList.add('more'); r.querySelector('[data-f=commessa].hide, [data-f=note].hide')?.focus(); }
   else if (ds.welcome === 'add') openAdd(today());
-  else if (ds.welcome === 'ado') { if (adoReady()) adoRefresh(); else adoSetup(false).then(ok => { adoBtn(); render(); if (ok) adoRefresh(); }); }
+  else if (ds.welcome === 'ado') { if (adoReady()) adoRefresh(); else reconnect(); }
   else if (ds.dup) duplicate(ds.dup);
   else if (ds.move) pickDay(ds.move, t);
   else if (ds.absent) addAbsence(ds.date, ds.absent);
@@ -1682,19 +1748,25 @@ async function savePatRemote() {
 // Dialogo di collegamento: organizzazione, PAT e progetti, provati prima di salvarli. Ritorna true se collegato.
 const adoMsg = (m, err) => { $('adoMsg').textContent = m; $('adoMsg').classList.toggle('err', !!err); };
 let adoDone = null;
-function adoSetup(inline) {
+// passo 3 della procedura: al primo avvio con "Salta", dall'app con "Torna all'app"
+function adoSetup(fromApp) {
   const f = $('fAdo');
   f.org.value = adoOrg() ?? ''; f.pat.value = pat ?? ''; f.projects.value = adoProjects().join(', ');
   $('adoPrj').innerHTML = ''; adoMsg(store?.kind === 'github' ? 'Il token resta in questo browser e nel tuo repo privato (segreti.json): gli altri dispositivi lo prendono da lì.' : 'Il token resta salvato solo in questo browser.');
-  $('adoSkip').textContent = inline ? 'Salta, lo faccio dopo' : 'Annulla';
-  if (inline) { $('wz2').append(f); wzStep(2); } else { $('dlgAdo').append(f); $('dlgAdo').showModal(); }
+  $('adoSkip').textContent = fromApp ? "← Torna all'app" : 'Salta, lo faccio dopo';
+  wzStep(3);
   f.orgSel.hidden = true; f.org.hidden = false;
   if (f.pat.value) loadOrgs(); // con il token già noto, organizzazioni (e poi progetti) arrivano da sole
   (f.pat.value ? f.org.value ? f.projects : f.org : f.pat).focus();
-  return new Promise(res => { adoDone = ok => { adoDone = null; if ($('dlgAdo').open) $('dlgAdo').close(); res(ok); }; });
+  return new Promise(res => { adoDone = ok => { adoDone = null; res(ok); }; });
 }
 $('adoSkip').onclick = () => adoDone?.(false);
-$('dlgAdo').addEventListener('close', () => adoDone?.(false));
+// dall'app (riquadro DevOps, Impostazioni, diario vuoto): passo 3, poi di nuovo all'app
+async function reconnect() {
+  const ok = await adoSetup(true);
+  backToApp(); adoBtn(); render();
+  if (ok) adoRefresh();
+}
 // con organizzazione e token scritti, l'elenco dei progetti arriva da solo
 // Organizzazioni del token: profilo → account di cui sono membro. Serve un token per tutte le organizzazioni
 // con User Profile: Read; se non va, l'organizzazione si scrive a mano.
@@ -1778,18 +1850,15 @@ async function adoStart() {
   // "Salta" o "Annulla" valgono finché non lo collego io dalle Impostazioni: non lo richiedo a ogni apertura
   if (!adoReady()) {
     if (data.devops.skipped) { adoBtn(); return setStatus('DevOps non collegato', 'err'); }
-    const first = !adoOrg(), ok = await adoSetup(first);
-    if (first) enterApp();
-    if (!ok) { mutate(() => { data.devops.skipped = true; }); adoBtn(); return setStatus('DevOps non collegato', 'err'); }
+    const first = !adoOrg(), ok = await adoSetup(!first);
+    if (!ok) mutate(() => { data.devops.skipped = true; });
+    if (first) { await wzDone(); enterApp(); } else backToApp();
+    if (!ok) { adoBtn(); return setStatus('DevOps non collegato', 'err'); }
   }
   adoBtn(); render();
   adoRefresh();
 }
-$('ado').onclick = async ev => {
-  if ((!adoReady() || ev.shiftKey) && !await adoSetup(false)) return;
-  adoBtn(); render();
-  adoRefresh();
-};
+$('ado').onclick = ev => { if (!adoReady() || ev.shiftKey) reconnect(); else adoRefresh(); };
 
 // ---------- toast ----------
 let toastTimer, toastAct;
