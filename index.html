@@ -243,6 +243,7 @@
   .gate .primary { width:100%; margin-bottom:12px; padding:10px; }
   .choice { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
   .gate .card { max-width:640px; }
+  .gh-new { display:flex; flex-wrap:wrap; gap:8px; }
   .fld { display:grid; grid-template-columns:70px 1fr; gap:8px; align-items:center; margin-bottom:8px; font-size:13px; color:var(--muted); }
   #status { cursor:pointer; } #status:hover { color:var(--accent); }
   .opt-card { display:flex; flex-direction:column; gap:4px; padding:14px; border:1px solid var(--line); border-radius:12px; text-align:left; background:var(--bg); }
@@ -334,7 +335,15 @@
   <label class="fld">File <input name="path" value="attivita.json"></label>
   <label class="fld">Token <input name="token" type="password" required autocomplete="off" placeholder="github_pat_…"></label>
   <p class="sub" id="ghMsg" aria-live="polite"></p>
-  <div class="dl-foot"><button class="btn" value="cancel" formnovalidate>Annulla</button><button class="primary" value="ok">Collega</button></div>
+  <div id="ghNew" hidden>
+    <p class="sub">Nel repo non c'è ancora il file: <b>cosa ci metto?</b></p>
+    <div class="gh-new">
+      <button type="button" class="btn" data-ghinit="current" id="ghCurrent"></button>
+      <button type="button" class="btn" data-ghinit="pc">Un attivita.json dal PC…</button>
+      <button type="button" class="btn" data-ghinit="empty">Un riepilogo vuoto</button>
+    </div>
+  </div>
+  <div class="dl-foot"><button class="btn" value="cancel" formnovalidate>Annulla</button><button class="primary" value="ok" id="ghGo">Collega</button></div>
 </form></dialog>
 <dialog id="dlgSprint"><form method="dialog">
   <h3>Sprint</h3>
@@ -593,12 +602,30 @@ document.addEventListener('visibilitychange', async () => {
 // chiudendo con un salvataggio ancora in corso il browser chiede conferma
 window.addEventListener('beforeunload', ev => { if (saving) ev.preventDefault(); });
 // archivio su GitHub: repo privato tuo + fine-grained token limitato a quel repo
-$('gh').onclick = () => { $('ghMsg').textContent = ''; $('dlgGh').showModal(); };
+let ghPending; // repo verificato ma senza file: aspetto la scelta di cosa metterci
+const ghMsg = t => { $('ghMsg').textContent = t; };
+$('gh').onclick = () => { ghMsg(''); $('ghNew').hidden = true; $('ghGo').hidden = false; $('dlgGh').showModal(); };
+async function ghFinish({s, cfg}) {
+  if (saveTimer) await flush(); // eventuali modifiche in sospeso vanno nel vecchio archivio prima di cambiare
+  $('dlgGh').close();
+  await openStore(s, () => kv('readwrite', st => st.put(cfg, 'gh')));
+}
+// file mancante nel repo: la scelta è esplicita, mai un riepilogo vuoto per sbaglio
+$('ghNew').onclick = async ev => {
+  const how = ev.target.closest('[data-ghinit]')?.dataset.ghinit; if (!how || !ghPending) return;
+  try {
+    let text = JSON.stringify({version: 1, entries: []}, null, 1);
+    if (how === 'current') text = JSON.stringify(data, null, 1);
+    if (how === 'pc') { const [h] = await showOpenFilePicker({types: JSON_TYPE}); text = await (await h.getFile()).text(); JSON.parse(text); }
+    ghMsg('Scrivo il file nel repo…'); await ghPending.s.write(text, ghPending.ver);
+    await ghFinish(ghPending); ghPending = null;
+  } catch (err) { if (err.name !== 'AbortError') ghMsg('Non riuscito: ' + (err.message ?? err)); }
+};
 $('fGh').onsubmit = async ev => {
   if (ev.submitter?.value !== 'ok') return;
   ev.preventDefault(); // il dialogo resta aperto finché il collegamento non riesce
   const f = $('fGh'), cfg = {repo: f.repo.value.trim(), path: f.path.value.trim() || 'attivita.json', token: f.token.value.trim()};
-  const msg = t => { $('ghMsg').textContent = t; };
+  const msg = ghMsg;
   try {
     msg('Controllo il repo…');
     const r = await fetch(`https://api.github.com/repos/${cfg.repo}`, {cache: 'no-store', headers: {Authorization: `Bearer ${cfg.token}`}});
@@ -607,19 +634,15 @@ $('fGh').onsubmit = async ev => {
     if (!r.ok) throw new Error(`GitHub HTTP ${r.status}`);
     // ore e assenze (malattia compresa): su un repo pubblico li vedrebbe chiunque
     if (!(await r.json()).private) throw new Error('il repo è pubblico: per questi dati serve un repo privato');
-    const s = ghStore(cfg);
-    if (!await s.read()) {
-      // file non ancora nel repo: ci porto il riepilogo aperto adesso, o un file del PC, o parto vuoto
-      let text = JSON.stringify({version: 1, entries: []}, null, 1);
-      if (data && confirm(`Il file ${cfg.path} non c'è ancora nel repo.\nCi copio il riepilogo aperto adesso (${data.entries.length} righe)?`)) text = JSON.stringify(data, null, 1);
-      else if (!data && confirm(`Il file ${cfg.path} non c'è ancora nel repo.\n\nOK = ci carico un attivita.json dal PC\nAnnulla = parto da un riepilogo vuoto`)) {
-        const [h] = await showOpenFilePicker({types: JSON_TYPE}); text = await (await h.getFile()).text(); JSON.parse(text);
-      }
-      msg('Creo il file nel repo…'); await s.write(text, null);
-    }
-    if (saveTimer) await flush(); // eventuali modifiche in sospeso vanno nel vecchio archivio prima di cambiare
-    $('dlgGh').close();
-    await openStore(s, () => kv('readwrite', st => st.put(cfg, 'gh')));
+    const s = ghStore(cfg), cur = await s.read();
+    // un file vuoto nel repo mentre qui ho un riepilogo vale come mancante: non lo apro senza chiedere
+    const empty = cur && !(JSON.parse(cur.text).entries?.length) && data?.entries.length;
+    if (cur && !empty) return ghFinish({s, cfg});
+    ghPending = {s, cfg, ver: cur?.ver ?? null}; msg('');
+    $('ghNew').querySelector('b').textContent = empty ? 'il file nel repo è vuoto: cosa ci metto?' : 'cosa ci metto?';
+    $('ghCurrent').hidden = !data?.entries.length;
+    if (data) $('ghCurrent').textContent = `Il riepilogo aperto adesso (${data.entries.length} righe)`;
+    $('ghNew').hidden = false; $('ghGo').hidden = true;
   } catch (err) { msg('Non riuscito: ' + (err.message ?? err)); }
 };
 // clic sullo stato: dove stanno i dati, e cambio archivio
