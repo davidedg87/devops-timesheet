@@ -32,7 +32,6 @@
 
   /* top bar */
   .top { position:sticky; top:0; z-index:20; height:56px; display:flex; align-items:center; gap:10px; padding:0 20px; background:var(--card); border-bottom:1px solid var(--line); }
-  .brand { font-weight:700; letter-spacing:-.01em; margin-right:12px; }
   .nav { display:flex; align-items:center; gap:2px; }
   .nav h1 { font-size:17px; font-weight:600; margin:0 6px; min-width:150px; text-align:center; text-transform:capitalize; }
   .icon { width:30px; height:30px; display:inline-grid; place-items:center; color:var(--muted); }
@@ -50,14 +49,43 @@
   #status.busy::before { background:var(--warn); } #status.err { color:var(--bad); } #status.err::before { background:var(--bad); }
 
   /* layout */
-  .layout { display:grid; grid-template-columns:210px minmax(0,1fr); align-items:start; }
-  aside { position:sticky; top:56px; height:calc(100vh - 56px); overflow:auto; padding:16px 10px; border-right:1px solid var(--line); }
-  .year { display:flex; align-items:center; justify-content:space-between; font-weight:600; padding:0 4px 10px; }
-  .mon { width:100%; display:flex; align-items:center; gap:8px; padding:7px 10px; margin-bottom:1px; text-align:left; }
+  #app { display:grid; grid-template-columns:236px minmax(0,1fr); align-items:start; }
+  .mainwrap { min-width:0; }
+  /* menu a sinistra */
+  .side { position:sticky; top:0; height:100vh; overflow:auto; display:flex; flex-direction:column; gap:4px; padding:14px 12px; background:var(--card); border-right:1px solid var(--line); }
+  .side-brand { display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:-.01em; padding:4px 6px 14px; }
+  .logo { width:30px; height:30px; border-radius:9px; background:var(--accent); color:#fff; display:grid; place-items:center; flex:none; }
+  .logo svg { width:18px; height:18px; }
+  .nav-i { width:100%; display:flex; align-items:center; gap:11px; padding:9px 10px; font-weight:500; color:var(--muted); text-align:left; }
+  .nav-i svg { width:19px; height:19px; flex:none; }
+  .nav-i:hover { background:var(--hover); color:var(--fg); }
+  .nav-i.on { background:var(--accent-soft); color:var(--accent); font-weight:600; }
+  .side-sec { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); padding:14px 10px 4px; }
+  .months { border-top:1px solid var(--line); margin-top:10px; padding-top:6px; }
+  .side-foot { margin-top:auto; padding-top:12px; display:flex; flex-direction:column; gap:6px; }
+  .ado-card { border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:var(--bg); }
+  .adc-top { display:flex; align-items:center; gap:8px; font-size:13px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--faint); flex:none; }
+  .dot.ok { background:var(--ok); } .dot.stale { background:var(--warn); } .dot.off { background:var(--bad); }
+  .adc-sub { font-size:12px; color:var(--muted); margin:3px 0 8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ado-card .btn { width:100%; }
+  .ado-card .btn.primary { color:#fff; border-color:var(--accent); }
+  .page-title { font-size:18px; font-weight:650; margin:0 8px 0 4px; letter-spacing:-.01em; }
+  .tabbar { display:none; }
+  /* impostazioni */
+  .set { display:grid; gap:14px; max-width:760px; }
+  .set-card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 20px; box-shadow:var(--shadow); }
+  .set-card h3 { margin:0 0 6px; font-size:16px; display:flex; align-items:center; gap:8px; }
+  .set-card p { margin:0 0 6px; color:var(--muted); } .set-card p b { color:var(--fg); }
+  .set-act { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .pill { display:inline-block; padding:2px 10px; border-radius:20px; background:var(--accent-soft); color:var(--accent); font-size:13px; font-weight:600; margin:2px 4px 2px 0; }
+  .keys { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:6px 16px; font-size:13px; color:var(--muted); }
+  .year { display:flex; align-items:center; justify-content:space-between; font-weight:600; padding:0 4px 4px; font-size:13px; }
+  .mon { width:100%; display:flex; align-items:center; gap:8px; padding:5px 10px; margin-bottom:1px; text-align:left; font-size:13px; }
   .mon:hover { background:var(--hover); } .mon.on { background:var(--accent-soft); color:var(--accent); font-weight:600; }
   .mon .mh { margin-left:auto; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
   .badge { min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:var(--warn-soft); color:var(--warn); font-size:11px; font-weight:700; display:inline-grid; place-items:center; }
-  main { padding:16px 24px 80px; min-width:0; }
+  main { padding:18px 28px 80px; min-width:0; }
 
   .hero { display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; margin-bottom:14px; }
   .hero-who { display:flex; flex-direction:column; justify-content:center; min-width:220px; }
@@ -241,79 +269,134 @@
   #toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px); opacity:0; pointer-events:none; transition:.2s; background:#1f2937; color:#fff; padding:10px 16px; border-radius:10px; display:flex; gap:14px; align-items:center; box-shadow:0 10px 30px rgba(0,0,0,.25); z-index:60; }
   #toast.show { opacity:1; transform:translateX(-50%); pointer-events:auto; }
   #toast button { color:#a5b4fc; font-weight:600; }
-  .gate { min-height:100vh; display:grid; place-items:center; padding:16px; }
-  .gate .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:32px; max-width:440px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.08); }
-  .gate h2 { margin:0 0 8px; } .gate p { color:var(--muted); margin:0 0 20px; }
-  .gate .primary { width:100%; margin-bottom:12px; padding:10px; }
-  .choice { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
-  .gate .card { max-width:640px; }
+  .gate { min-height:100vh; display:grid; place-items:center; padding:24px 16px; }
+  .wz { width:min(640px, 100%); background:var(--card); border:1px solid var(--line); border-radius:18px; padding:28px 32px 30px; box-shadow:0 10px 40px rgba(0,0,0,.08); }
+  .wz-brand { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+  .wz-brand .logo { width:40px; height:40px; border-radius:12px; } .wz-brand .logo svg { width:24px; height:24px; }
+  .wz-brand b { display:block; font-size:18px; letter-spacing:-.01em; } .wz-brand div span { color:var(--muted); font-size:13px; }
+  .steps { display:flex; gap:8px; list-style:none; padding:0; margin:0 0 22px; }
+  .steps li { flex:1; display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; background:var(--hover); color:var(--muted); font-size:13px; font-weight:500; }
+  .steps li i { font-style:normal; width:22px; height:22px; border-radius:50%; display:grid; place-items:center; background:var(--card); border:1px solid var(--line); font-size:12px; font-weight:700; }
+  .steps li.on { background:var(--accent-soft); color:var(--accent); } .steps li.on i { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .steps li.done i { background:var(--ok); color:#fff; border-color:var(--ok); }
+  .wz h2 { margin:0 0 6px; font-size:20px; letter-spacing:-.01em; }
+  .wz .sub { color:var(--muted); margin:0 0 18px; }
+  .wz .wide { width:100%; margin-bottom:10px; padding:10px; }
+  .choice { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .opt-card { position:relative; display:flex; flex-direction:column; gap:6px; padding:18px 16px; border:1.5px solid var(--line); border-radius:14px; text-align:left; background:var(--card); }
+  .opt-card:hover { border-color:var(--accent); background:var(--accent-soft); }
+  .opt-card b { font-size:15px; } .opt-card span { color:var(--muted); font-size:13px; }
+  .opt-card .tag { position:absolute; top:-9px; right:12px; background:var(--accent); color:#fff; font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; }
+  .wz-alt { margin:16px 0 0; color:var(--muted); font-size:13px; text-align:center; }
+  .howto { margin:0 0 16px; padding-left:20px; color:var(--muted); } .howto li { margin-bottom:4px; } .howto b { color:var(--fg); }
+  .wz .fld { grid-template-columns:110px 1fr; }
+  .wz input { padding:8px 10px; border:1px solid var(--line); border-radius:9px; background:var(--bg); color:inherit; font:inherit; min-width:0; }
   .gh-new { display:flex; flex-wrap:wrap; gap:8px; }
   .qr { width:240px; max-width:100%; margin:0 auto; background:#fff; border-radius:8px; } /* bianco anche in tema scuro: i lettori QR vogliono contrasto */
   .qr svg { display:block; width:100%; height:auto; }
   #dlgStore .dl-foot { flex-wrap:wrap; }
   #fAdo .fld { grid-template-columns:110px 1fr; }
+  #fAdo h3 { font-size:18px; }
+  .wz #fAdo h3 { font-size:20px; margin-bottom:10px; }
   .fld { display:grid; grid-template-columns:70px 1fr; gap:8px; align-items:center; margin-bottom:8px; font-size:13px; color:var(--muted); }
   #status { cursor:pointer; } #status:hover { color:var(--accent); }
   .ico { display:inline-flex; align-items:center; gap:6px; } .ico svg { width:16px; height:16px; flex:none; }
   .opt-card .ico svg { width:22px; height:22px; color:var(--accent); }
-  #where.github svg { color:var(--fg); } #where.file svg { color:var(--accent); }
-  .opt-card { display:flex; flex-direction:column; gap:4px; padding:14px; border:1px solid var(--line); border-radius:12px; text-align:left; background:var(--bg); }
-  .opt-card:hover { border-color:var(--accent); background:var(--accent-soft); }
-  .opt-card span { color:var(--muted); font-size:13px; }
-  .gate .hint { font-size:12px; margin:14px 0 0; }
-  @media (max-width: 520px) { .choice { grid-template-columns:1fr; } }
+  @media (max-width: 560px) {
+    .choice { grid-template-columns:1fr; } .wz { padding:22px 18px; } .steps li { font-size:12px; }
+    .wz .fld, #fAdo .fld { grid-template-columns:1fr; gap:4px; }
+    .dl-foot { flex-wrap:wrap; } .dl-foot .primary { order:-1; flex-basis:100%; padding:10px; }
+  }
   kbd { font:11px "Cascadia Mono",Consolas,monospace; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; padding:0 4px; color:var(--muted); }
   .help { margin-top:24px; font-size:12px; color:var(--faint); display:flex; gap:16px; flex-wrap:wrap; }
 
   @media (max-width: 1000px) {
-    .layout { grid-template-columns:1fr; } aside { display:none; }
+    #app { grid-template-columns:1fr; } .side { display:none; }
+    main { padding:14px 14px 96px; } .top { padding:0 12px; gap:6px; } .page-title { display:none; }
+    .tabbar { display:grid; grid-template-columns:repeat(5, 1fr); position:fixed; left:0; right:0; bottom:0; z-index:30; background:var(--card); border-top:1px solid var(--line); padding:4px 4px calc(4px + env(safe-area-inset-bottom)); }
+    .tabbar .nav-i { flex-direction:column; gap:2px; padding:6px 2px; font-size:11px; text-align:center; }
+    #toast { bottom:84px; }
+    .nav h1 { min-width:0; font-size:16px; margin:0 2px; } .search { min-width:80px; }
     :root { --cols: 20px minmax(160px,1fr) 110px 58px 56px 40px 0 0 94px; }
     .row [data-f=commessa], .row [data-f=note], .colhead span:nth-child(7), .colhead span:nth-child(8) { display:none; }
-    .quick { grid-template-columns:1fr 1fr; } .search input { width:150px; } .brand, #status, #where .wl { display:none; }
+    .quick { grid-template-columns:1fr 1fr; } .search { flex:1; } .search input { width:100%; } #status { display:none; }
   }
   @media print {
-    .top, aside, .sticky, .acts, .grip, .empty, .kpis button { display:none !important; }
-    body { background:#fff; } .layout { display:block; } .day, .ras-wrap { box-shadow:none; break-inside:avoid; }
+    .top, .side, .tabbar, .sticky, .acts, .grip, .empty, .kpis button { display:none !important; }
+    body { background:#fff; } #app { display:block; } .day, .ras-wrap { box-shadow:none; break-inside:avoid; }
   }
 </style>
 </head>
 <body>
 
 <div class="gate" id="gate">
-  <div class="card">
-    <h2>DevOps Timesheet</h2>
-    <p class="tagline">Il tuo diario ore che si compila da Azure DevOps: legge le ore dei tuoi task nei progetti che scegli, te le fa ricaricare sui task, e ci aggiungi a mano ferie, malattie e permessi.</p>
-    <p>Le attività stanno in un file <b>attivita.json</b>: sul tuo PC o in un tuo repo GitHub privato. La pagina lo legge e lo salva lì, non lo invia altrove.</p>
-    <button class="primary" id="reopen" hidden>Riapri attivita.json</button>
-    <button class="btn" id="back" hidden>← Torna al riepilogo senza cambiare</button>
-    <div class="choice">
-      <button class="opt-card" id="open"><b class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M1.5 3.5h4.5l1.5 1.5h7v8h-13z"/></svg>Ho già un file</b><span>Apri il tuo attivita.json dal PC</span></button>
-      <button class="opt-card" id="create"><b class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"><path d="M3.5 1.5h5.5l3.5 3.5v9.5h-9zM9 1.5V5h3.5M8 7.5v5M5.5 10h5"/></svg>Parto da zero</b><span>Crea un file nuovo sul PC: la prima sync con Azure DevOps recupera le ore dei tuoi task dall'inizio dell'anno</span></button>
-      <button class="opt-card" id="gh"><b class="ico"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Su GitHub</b><span>In un tuo repo privato: niente file da scegliere, lo ritrovi su ogni PC e browser</span></button>
-    </div>
-    <p class="hint">Sul PC, tienilo nella cartella OneDrive: così lo ritrovi su ogni PC.</p>
+  <div class="wz">
+    <div class="wz-brand"><span class="logo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10.5" r="6.5"/><path d="M10 7v3.5l2.5 1.5M8 2.5h4"/></svg></span><div><b>DevOps Timesheet</b><span>Il diario ore che si compila da Azure DevOps</span></div></div>
+    <ol class="steps"><li data-step="1" class="on"><i>1</i>Dove salvare i dati</li><li data-step="2"><i>2</i>Collega Azure DevOps</li></ol>
+    <section id="wz1">
+      <div id="wzChoose">
+        <h2>Dove salvo i tuoi dati?</h2>
+        <p class="sub">Ore e assenze finiscono in un file <b>attivita.json</b> tuo. Nessun server: la pagina lo legge e lo salva solo lì.</p>
+        <button class="primary wide" id="reopen" hidden>Riapri attivita.json</button>
+        <button class="btn wide" id="back" hidden>← Torna all'app senza cambiare</button>
+        <div class="choice">
+          <button class="opt-card" id="gh"><span class="tag">Consigliato</span><b class="ico"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>In un repo GitHub privato</b><span>Lo ritrovi su ogni PC e sul telefono, senza scegliere file.</span></button>
+          <button class="opt-card" id="create"><b class="ico"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M1.5 3.5h4.5l1.5 1.5h7v8h-13z"/></svg>In un file sul PC</b><span>Scegli dove crearlo, ad esempio in OneDrive. Serve Chrome o Edge.</span></button>
+        </div>
+        <p class="wz-alt">Hai già un attivita.json? <button class="link" id="open">Aprilo dal PC</button></p>
+      </div>
+      <form id="fGh" autocomplete="off" hidden>
+        <h2>Collega il repo GitHub</h2>
+        <ol class="howto">
+          <li>Crea su GitHub un repo <b>privato</b>, anche vuoto.</li>
+          <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Crea un token</a> <i>fine-grained</i> con accesso solo a quel repo e permesso <b>Contents: Read and write</b>.</li>
+          <li>Incolla qui repo e token: il token resta in questo browser.</li>
+        </ol>
+        <label class="fld">Repo <input name="repo" placeholder="utente/timesheet-dati" required pattern="[\w.\-]+/[\w.\-]+"></label>
+        <label class="fld">File <input name="path" value="attivita.json"></label>
+        <label class="fld">Token <input name="token" type="password" required autocomplete="off" placeholder="github_pat_…"></label>
+        <p class="sub" id="ghMsg" aria-live="polite"></p>
+        <div id="ghNew" hidden>
+          <p class="sub">Nel repo non c'è ancora il file: <b>cosa ci metto?</b></p>
+          <div class="gh-new">
+            <button type="button" class="btn" data-ghinit="current" id="ghCurrent"></button>
+            <button type="button" class="btn" data-ghinit="pc">Un attivita.json dal PC…</button>
+            <button type="button" class="btn" data-ghinit="empty">Un diario vuoto</button>
+          </div>
+        </div>
+        <div class="dl-foot"><button class="btn" type="button" id="ghBack">← Indietro</button><button class="primary" value="ok" id="ghGo">Collega</button></div>
+      </form>
+    </section>
+    <section id="wz2" hidden></section>
   </div>
 </div>
 
 <div id="app" hidden>
+  <nav class="side">
+    <div class="side-brand"><span class="logo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10" cy="10.5" r="6.5"/><path d="M10 7v3.5l2.5 1.5M8 2.5h4"/></svg></span>DevOps Timesheet</div>
+    <button class="nav-i" data-view="diary" title="Diario"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h9a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2V4a1 1 0 0 1 1-1z"/><path d="M7.5 7h5M7.5 10.5h5"/></svg><span>Diario</span></button>
+    <button class="nav-i" data-view="ras" title="Mese"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2.5v3M13 2.5v3M7 11.5h.01M10 11.5h.01M13 11.5h.01M7 14.5h.01M10 14.5h.01"/></svg><span>Mese</span></button>
+    <button class="nav-i" data-view="charts" title="Grafici"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9M8.5 16V4M13 16v-5M17 16H3"/></svg><span>Grafici</span></button>
+    <button class="nav-i" data-act="sprints" title="Sprint"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a6 6 0 0 1 10.2-4.3L16 7.5M16 3.5v4h-4M16 10a6 6 0 0 1-10.2 4.3L4 12.5M4 16.5v-4h4"/></svg><span>Sprint</span></button>
+    <button class="nav-i" data-act="export" title="Esporta"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M6.5 8.5 10 12l3.5-3.5M4 14v2a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2"/></svg><span>Esporta</span></button>
+    <div class="months" id="side"></div>
+    <div class="side-foot">
+      <div class="ado-card"><div class="adc-top"><span class="dot" id="adoDot"></span><b>Azure DevOps</b></div><div class="adc-sub" id="adoSub"></div><button class="btn" id="ado"></button></div>
+      <button class="nav-i" data-view="settings" title="Impostazioni"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.5"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/></svg><span>Impostazioni</span></button>
+    </div>
+  </nav>
+  <div class="mainwrap">
   <header class="top">
-    <span class="brand">DevOps Timesheet</span>
-    <div class="nav">
+    <h1 class="page-title" id="pageTitle">Diario</h1>
+    <div class="nav" id="monthNav">
       <button class="icon" id="prev" title="Mese precedente (Alt+←)">‹</button>
       <h1 id="month"></h1>
       <button class="icon" id="next" title="Mese successivo (Alt+→)">›</button>
       <button class="btn" id="today" style="margin-left:6px">Oggi</button>
     </div>
-    <div class="tabs"><button id="vDiary" class="on">Diario</button><button id="vRas">Mese</button><button id="vCharts">Grafici</button></div>
-    <button class="btn" id="sprints" title="Definisci gli sprint">Sprint</button>
-    <button class="btn" id="export" title="Esporta per settimana, mese o sprint">Esporta</button>
-    <button class="btn" id="ado">⟳ Sync Azure DevOps</button>
     <label class="search"><input id="q" type="search" placeholder="Cerca attività, task, note…  ( / )"></label>
-    <button class="btn ico" id="where" title="Dove sono salvati i dati"></button>
-    <button id="status">Pronto</button>
+    <button id="status" title="Stato del salvataggio">Pronto</button>
   </header>
-  <div class="layout">
-    <aside id="side"></aside>
     <main>
       <div class="hero" id="hero"></div>
       <div class="kpis" id="kpis"></div>
@@ -330,13 +413,16 @@
         <div class="colhead" id="colhead"><span></span><span>Attività</span><span>Task</span><span>US</span><span style="text-align:right">Ore</span><span style="text-align:right">%</span><span>Commessa</span><span>Note</span><span></span></div>
       </div>
       <div id="content"></div>
-      <div class="help">
+      <div class="help" id="help">
         <span><kbd>N</kbd> nuova attività</span><span><kbd>↑</kbd><kbd>↓</kbd> <kbd>↵</kbd> muoviti tra le righe</span>
         <span><kbd>Ctrl</kbd>+<kbd>D</kbd> duplica riga</span><span><kbd>Ctrl</kbd>+<kbd>Z</kbd> annulla</span>
         <span><kbd>Alt</kbd>+<kbd>←</kbd><kbd>→</kbd> cambia mese</span><span>trascina <b>⠿</b> per spostare su un altro giorno</span>
       </div>
     </main>
   </div>
+  <nav class="tabbar">
+    <button class="nav-i" data-view="diary" title="Diario"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h9a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2V4a1 1 0 0 1 1-1z"/><path d="M7.5 7h5M7.5 10.5h5"/></svg><span>Diario</span></button><button class="nav-i" data-view="ras" title="Mese"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2.5v3M13 2.5v3M7 11.5h.01M10 11.5h.01M13 11.5h.01M7 14.5h.01M10 14.5h.01"/></svg><span>Mese</span></button><button class="nav-i" data-view="charts" title="Grafici"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V9M8.5 16V4M13 16v-5M17 16H3"/></svg><span>Grafici</span></button><button class="nav-i" data-act="sprints" title="Sprint"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10a6 6 0 0 1 10.2-4.3L16 7.5M16 3.5v4h-4M16 10a6 6 0 0 1-10.2 4.3L4 12.5M4 16.5v-4h4"/></svg><span>Sprint</span></button><button class="nav-i" data-view="settings" title="Altro"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.5"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/></svg><span>Altro</span></button>
+  </nav>
 </div>
 <div class="ac" id="ac" hidden></div>
 <input type="date" id="movePick" tabindex="-1" aria-hidden="true">
@@ -350,36 +436,18 @@
   </div>
   <div class="dl-foot"><button class="btn" type="button" id="stQrBtn">Collega un altro dispositivo</button><button class="btn" type="button" id="stChange">Cambia archivio</button><button class="primary" value="ok">Chiudi</button></div>
 </form></dialog>
-<dialog id="dlgGh"><form method="dialog" id="fGh">
-  <h3>Archivio su GitHub</h3>
-  <p class="sub">Serve un tuo repo <b>privato</b> (anche vuoto) e un <i>fine-grained token</i> con accesso solo a quel repo e permesso
-    <b>Contents: Read and write</b> — <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">crealo qui</a>.
-    Il token resta in questo browser; la pagina pubblica non contiene dati.</p>
-  <label class="fld">Repo <input name="repo" placeholder="utente/timesheet-dati" required pattern="[\w.\-]+/[\w.\-]+"></label>
-  <label class="fld">File <input name="path" value="attivita.json"></label>
-  <label class="fld">Token <input name="token" type="password" required autocomplete="off" placeholder="github_pat_…"></label>
-  <p class="sub" id="ghMsg" aria-live="polite"></p>
-  <div id="ghNew" hidden>
-    <p class="sub">Nel repo non c'è ancora il file: <b>cosa ci metto?</b></p>
-    <div class="gh-new">
-      <button type="button" class="btn" data-ghinit="current" id="ghCurrent"></button>
-      <button type="button" class="btn" data-ghinit="pc">Un attivita.json dal PC…</button>
-      <button type="button" class="btn" data-ghinit="empty">Un riepilogo vuoto</button>
-    </div>
-  </div>
-  <div class="dl-foot"><button class="btn" value="cancel" formnovalidate>Annulla</button><button class="primary" value="ok" id="ghGo">Collega</button></div>
-</form></dialog>
-<dialog id="dlgAdo"><form method="dialog" id="fAdo">
+<dialog id="dlgAdo"><form id="fAdo" autocomplete="off">
   <h3>Collega Azure DevOps</h3>
-  <p class="sub">Le ore arrivano dal <b>Completed Work</b> dei task che ti sono assegnati o che hai modificato, nei progetti che scegli qui.
-    Serve un <i>Personal Access Token</i> (Azure DevOps → User settings → Personal access tokens) con <b>Work Items: Read &amp; write</b>;
-    aggiungi <b>Project and Team: Read</b> se vuoi scegliere i progetti da un elenco. Il PAT non finisce mai in attivita.json.</p>
+  <ol class="howto">
+    <li>Su Azure DevOps apri <b>User settings → Personal access tokens</b> e crea un token con <b>Work Items: Read &amp; write</b>. Aggiungi <b>Project and Team: Read</b> per scegliere i progetti da un elenco.</li>
+    <li>Scrivi organizzazione e token: l'elenco dei progetti compare da solo. Spunta quelli da cui leggere le ore.</li>
+  </ol>
   <label class="fld">Organizzazione <input name="org" required placeholder="nome, o https://dev.azure.com/nome" autocomplete="off"></label>
   <label class="fld">PAT <input name="pat" type="password" required autocomplete="off"></label>
   <label class="fld">Progetti <input name="projects" required placeholder="Progetto A, Progetto B" autocomplete="off"></label>
   <div id="adoPrj"></div>
   <p class="sub" id="adoMsg" aria-live="polite"></p>
-  <div class="dl-foot"><button class="btn" value="cancel" formnovalidate>Annulla</button><button class="btn" type="button" id="adoLoad">Elenca progetti</button><button class="primary" value="ok" id="adoGo">Collega</button></div>
+  <div class="dl-foot"><button class="btn" type="button" id="adoSkip">Annulla</button><button class="btn" type="button" id="adoLoad">Elenca progetti</button><button class="primary" value="ok" id="adoGo">Collega</button></div>
 </form></dialog>
 <dialog id="dlgSprint"><form method="dialog">
   <h3>Sprint</h3>
@@ -553,18 +621,26 @@ async function openStore(s, remember) {
   const c = await s.read();
   data = migrated(JSON.parse(c.text)); store = s; ver = c.ver; base = JSON.stringify(data);
   await remember?.();
-  $('status').title = `Dati salvati su ${s.label} · clic per cambiare archivio`;
-  $('where').className = 'btn ico ' + s.kind; $('where').title = `Dati salvati su ${s.label}`;
-  $('where').innerHTML = (s.kind === 'github' ? ICON_GH : ICON_PC) + `<span class="wl">${s.kind === 'github' ? 'GitHub' : 'File sul PC'}</span>`;
+  $('status').title = `Dati salvati su ${s.label} · clic per le impostazioni`;
   $('back').hidden = true;
-  $('gate').hidden = true; $('app').hidden = false;
   $('qDate').value = today();
-  render(); scrollToDay(today(), false);
+  if (adoOrg()) enterApp(); else wzStep(2); // primo avvio: secondo passo della procedura, collegare Azure DevOps
   adoStart();
 }
 async function load(h) {
   if (await h.requestPermission({mode:'readwrite'}) !== 'granted') return;
   openStore(fileStore(h), () => kv('readwrite', s => { s.put(h, 'file'); return s.delete('gh'); }));
+}
+// procedura guidata: 1 = dove salvare i dati, 2 = collegare Azure DevOps
+function wzStep(n) {
+  $('app').hidden = true; $('gate').hidden = false;
+  $('wz1').hidden = n !== 1; $('wz2').hidden = n !== 2;
+  document.querySelectorAll('.steps li').forEach(li => { li.classList.toggle('on', +li.dataset.step === n); li.classList.toggle('done', +li.dataset.step < n); });
+  if (n === 1) { $('wzChoose').hidden = false; $('fGh').hidden = true; }
+}
+function enterApp() {
+  $('gate').hidden = true; $('app').hidden = false;
+  view = 'diary'; render(); scrollToDay(today(), false);
 }
 // base = il file come l'ho letto o scritto l'ultima volta: confrontandolo con data so cosa ho cambiato io
 let base;
@@ -633,7 +709,7 @@ const fromLink = linkCfg(location.hash);
 if (location.hash.startsWith('#gh=')) history.replaceState(null, '', location.pathname + location.search);
 (fromLink?.repo && fromLink.token ? kv('readwrite', s => s.put(fromLink, 'gh')) : Promise.resolve())
   .then(() => Promise.all([kv('readonly', s => s.get('gh')), kv('readonly', s => s.get('file'))])).then(async ([gh, h]) => {
-  if (gh) return openStore(ghStore(gh)).catch(err => { $('ghMsg').textContent = ''; toast('GitHub: ' + err.message); });
+  if (gh) return openStore(ghStore(gh)).catch(err => { $('ghMsg').textContent = ''; wzStep(1); toast('GitHub: ' + err.message); });
   if (!h) return;
   if (await h.queryPermission({mode:'readwrite'}) === 'granted') return load(h);
   $('reopen').hidden = false; $('reopen').onclick = () => load(h); $('reopen').focus();
@@ -651,10 +727,11 @@ window.addEventListener('beforeunload', ev => { if (saving) ev.preventDefault();
 // archivio su GitHub: repo privato tuo + fine-grained token limitato a quel repo
 let ghPending; // repo verificato ma senza file: aspetto la scelta di cosa metterci
 const ghMsg = t => { $('ghMsg').textContent = t; };
-$('gh').onclick = () => { ghMsg(''); $('ghNew').hidden = true; $('ghGo').hidden = false; $('dlgGh').showModal(); };
+$('gh').onclick = () => { ghMsg(''); $('ghNew').hidden = true; $('ghGo').hidden = false; $('wzChoose').hidden = true; $('fGh').hidden = false; $('fGh').repo.focus(); };
+$('ghBack').onclick = () => { ghPending = null; $('fGh').hidden = true; $('wzChoose').hidden = false; };
 async function ghFinish({s, cfg}) {
   if (saveTimer) await flush(); // eventuali modifiche in sospeso vanno nel vecchio archivio prima di cambiare
-  $('dlgGh').close();
+  $('fGh').hidden = true; $('wzChoose').hidden = false;
   await openStore(s, () => kv('readwrite', st => st.put(cfg, 'gh')));
 }
 // file mancante nel repo: la scelta è esplicita, mai un riepilogo vuoto per sbaglio
@@ -669,8 +746,8 @@ $('ghNew').onclick = async ev => {
   } catch (err) { if (err.name !== 'AbortError') ghMsg('Non riuscito: ' + (err.message ?? err)); }
 };
 $('fGh').onsubmit = async ev => {
-  if (ev.submitter?.value !== 'ok') return;
-  ev.preventDefault(); // il dialogo resta aperto finché il collegamento non riesce
+  ev.preventDefault();
+  if ($('ghGo').hidden) return; // in attesa della scelta di cosa mettere nel file
   const f = $('fGh'), cfg = {repo: f.repo.value.trim(), path: f.path.value.trim() || 'attivita.json', token: f.token.value.trim()};
   const msg = ghMsg;
   try {
@@ -693,16 +770,18 @@ $('fGh').onsubmit = async ev => {
   } catch (err) { msg('Non riuscito: ' + (err.message ?? err)); }
 };
 // clic sullo stato: dove stanno i dati, collegamento di un altro dispositivo, cambio archivio
-$('where').onclick = $('status').onclick = () => {
+$('status').onclick = () => go('settings');
+function openStoreDlg(qr) {
   if (!store) return;
   $('stWhere').textContent = `I dati sono salvati su ${store.label}.`;
   $('stQrBtn').hidden = store.kind !== 'github'; $('stQr').hidden = true; $('qr').innerHTML = '';
   $('dlgStore').showModal();
-};
+  if (qr) $('stQrBtn').click();
+}
 $('stChange').onclick = async () => {
   $('dlgStore').close();
   if (saveTimer) await flush();
-  $('reopen').hidden = true; $('back').hidden = false; $('app').hidden = true; $('gate').hidden = false;
+  $('reopen').hidden = true; $('back').hidden = false; wzStep(1);
 };
 $('back').onclick = () => { $('gate').hidden = true; $('app').hidden = false; };
 // il QR lo disegna una libreria esterna, caricata solo quando serve
@@ -736,14 +815,28 @@ const newEntry = (date, o = {}) => ({id:crypto.randomUUID(), date, activity:'', 
 const find = id => data.entries.find(e => e.id === id);
 
 // ---------- render ----------
+const TITLES = {diary:'Diario', ras:'Mese', charts:'Grafici', settings:'Impostazioni'};
+// voce di menu: una vista, oppure sprint ed esporta che aprono il loro dialogo
+function go(v) {
+  if (v === 'sprints') return openSprints();
+  if (v === 'export') return openExport();
+  view = v; query = ''; $('q').value = ''; render(); window.scrollTo(0, 0);
+  if (v === 'diary') scrollToDay(today(), false);
+}
+document.querySelectorAll('.side, .tabbar').forEach(n => n.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-view],[data-act]'); if (t) go(t.dataset.view ?? t.dataset.act);
+}));
 function render() {
   reindex();
   const [y, m] = ym;
   $('month').textContent = `${MONTHS[m]} ${y}`;
-  $('vDiary').classList.toggle('on', view === 'diary'); $('vRas').classList.toggle('on', view === 'ras'); $('vCharts').classList.toggle('on', view === 'charts');
-  $('colhead').hidden = !!query || view !== 'diary';
+  const set = !query && view === 'settings';
+  $('pageTitle').textContent = query ? 'Ricerca' : TITLES[view];
+  document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', !query && b.dataset.view === view));
+  $('monthNav').hidden = set; $('hero').hidden = $('kpis').hidden = set;
+  $('quick').closest('.sticky').hidden = !!query || view !== 'diary'; $('help').hidden = !!query || view !== 'diary';
   renderChrome();
-  $('content').innerHTML = query ? searchView() : view === 'diary' ? diary() : view === 'ras' ? ras() : charts();
+  $('content').innerHTML = query ? searchView() : set ? settingsView() : view === 'diary' ? diary() : view === 'ras' ? ras() : charts();
   if (!query && view === 'diary') paintWarnings();
 }
 // testata: chi sono, oggi, e lo sprint che contiene oggi (non quello del mese visualizzato)
@@ -752,7 +845,7 @@ function heroHtml() {
   const next = data.sprints.find(x => x.start > k);
   let sp = next
     ? `<button class="hero-sp none" data-sprint-chart="${data.sprints.indexOf(next)}">Nessuno sprint in corso · prossimo: <b>${esc(next.name)}</b> da ${shortDate(next.start)}</button>`
-    : `<div class="hero-sp none">Nessuno sprint in corso${adoReady() ? '' : ' · gli sprint arrivano da Azure DevOps: collegalo con il pulsante Sync Azure DevOps'}</div>`;
+    : `<div class="hero-sp none">Nessuno sprint in corso${adoReady() ? '' : ' · gli sprint arrivano da Azure DevOps: collegalo dalle Impostazioni'}</div>`;
   if (s) {
     const {days, work, cap, reg} = sprintStats(s), left = work.filter(i => i.k > k).length, elapsed = work.filter(i => i.k <= k).length * H;
     sp = `<button class="hero-sp" data-sprint-chart="${data.sprints.indexOf(s)}" title="Apri i grafici dello sprint">
@@ -968,7 +1061,7 @@ function renderSprints() {
   $('spList').innerHTML = data.sprints.map((s, i) => [s, i]).reverse().map(([s, i]) => `<div class="sp-row">
     <b>${esc(s.name)}</b><span class="its">${iterChips(s.start, s.end, false) || '<span class="sub">nessuna ora su task DevOps</span>'}</span>
     <button type="button" class="icon danger" data-sphide="${i}" title="Nascondi questa finestra">✕</button></div>`).join('')
-    || `<div class="nodata">${adoReady() ? 'Nessuna finestra trovata: compaiono le iterazioni delle release su cui hai task con ore.' : 'Collega Azure DevOps (pulsante Sync Azure DevOps): gli sprint arrivano dalle iterazioni.'}</div>`;
+    || `<div class="nodata">${adoReady() ? 'Nessuna finestra trovata: compaiono le iterazioni delle release su cui hai task con ore.' : 'Collega Azure DevOps dalle Impostazioni: gli sprint arrivano dalle iterazioni.'}</div>`;
   $('spRestore').hidden = !data.sprintSkip.length;
 }
 function openSprints() { renderSprints(); $('dlgSprint').showModal(); }
@@ -980,7 +1073,39 @@ $('spList').addEventListener('click', ev => {
 });
 $('spRestore').onclick = () => { mutate(() => { data.sprintSkip = []; }); toast('Le finestre nascoste tornano alla prossima sincronizzazione'); renderSprints(); };
 $('dlgSprint').addEventListener('close', () => render());
-$('sprints').onclick = openSprints;
+
+// ---------- impostazioni ----------
+const syncWhen = () => data.ado.syncedAt ? new Date(data.ado.syncedAt).toLocaleString('it-IT', {weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : 'mai';
+function settingsView() {
+  const gh = store?.kind === 'github', name = data.owner || data.ado.me;
+  return `<div class="set">
+  <section class="set-card"><h3><span class="dot ${adoReady() ? 'ok' : 'off'}"></span>Azure DevOps</h3>
+    ${adoReady() ? `<p>Organizzazione <b>${esc(adoOrg())}</b></p><p>${adoProjects().map(p => `<span class="pill">${esc(p)}</span>`).join('')}</p>
+      <p>Ultima sincronizzazione: <b>${syncWhen()}</b>. Parte da sola a ogni apertura.</p>`
+    : `<p>Non collegato. Puoi comunque scrivere ore e assenze a mano; collegandolo, le ore dei tuoi task arrivano da sole.</p>`}
+    <div class="set-act">${adoReady() ? '<button class="primary" data-set="sync">⟳ Sincronizza ora</button>' : ''}
+      <button class="${adoReady() ? 'btn' : 'primary'}" data-set="ado">${adoReady() ? 'Cambia organizzazione, progetti o token' : 'Collega Azure DevOps'}</button></div></section>
+  <section class="set-card"><h3>Dove sono i tuoi dati</h3><p>Salvati su <b>${esc(store?.label ?? '')}</b>.</p>
+    <div class="set-act">${gh ? '<button class="btn" data-set="qr">Collega un altro dispositivo</button>' : ''}<button class="btn" data-set="store">Cambia archivio</button></div></section>
+  <section class="set-card"><h3>Profilo</h3><p>Nome in testata: <b>${esc(name) || '—'}</b></p>
+    <div class="set-act"><button class="btn" data-set="name">Cambia nome</button></div></section>
+  <section class="set-card"><h3>Esporta</h3><p>Un CSV per settimana, mese o sprint, pronto per Excel.</p>
+    <div class="set-act"><button class="btn" data-set="export">Esporta…</button></div></section>
+  <section class="set-card"><h3>Scorciatoie da tastiera</h3><div class="keys">${$('help').innerHTML}</div></section>
+  </div>`;
+}
+$('content').addEventListener('click', async ev => {
+  const a = ev.target.closest('[data-set]')?.dataset.set; if (!a) return;
+  if (a === 'sync') adoRefresh();
+  else if (a === 'ado') { if (await adoSetup(false)) { adoBtn(); render(); adoRefresh(); } }
+  else if (a === 'qr') openStoreDlg(true);
+  else if (a === 'store') $('stChange').click();
+  else if (a === 'export') openExport();
+  else if (a === 'name') {
+    const v = prompt('Nome e cognome da mostrare in testata (vuoto = quello di Azure DevOps)', data.owner || data.ado.me || '');
+    if (v !== null) { mutate(() => { data.owner = v.trim() || undefined; }); render(); }
+  }
+});
 
 // ---------- export ----------
 function openExport() {
@@ -1024,7 +1149,6 @@ function exportCsv({from, to, label}) {
 $('fExport').addEventListener('change', syncExport);
 $('fExport').addEventListener('input', syncExport);
 $('fExport').onsubmit = ev => { if (ev.submitter?.value !== 'ok') return; const r = exportRange(); if (r) exportCsv(r); };
-$('export').onclick = openExport;
 function searchView() {
   const q = query.toLowerCase(), hl = v => esc(v).replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/[&<>"]/g, c => esc(c)), 'gi'), m => `<mark>${m}</mark>`);
   const hits = data.entries.filter(e => [e.activity, e.task, e.absence, e.commessa, e.note].some(v => v && String(v).toLowerCase().includes(q))).sort((a, b) => b.date.localeCompare(a.date));
@@ -1034,7 +1158,7 @@ function searchView() {
 }
 
 // ---------- navigazione ----------
-function goMonth(y, m) { ym = [y, m]; render(); window.scrollTo(0, 0); }
+function goMonth(y, m) { ym = [y, m]; if (view === 'settings') view = 'diary'; render(); window.scrollTo(0, 0); }
 function scrollToDay(k, smooth = true, id) {
   const [y, m] = k.split('-').map(Number);
   if (query) { query = ''; $('q').value = ''; }
@@ -1049,9 +1173,6 @@ function scrollToDay(k, smooth = true, id) {
 $('prev').onclick = () => goMonth(...(ym[1] ? [ym[0], ym[1]-1] : [ym[0]-1, 11]));
 $('next').onclick = () => goMonth(...(ym[1] < 11 ? [ym[0], ym[1]+1] : [ym[0]+1, 0]));
 $('today').onclick = () => scrollToDay(today());
-$('vDiary').onclick = () => { view = 'diary'; query = ''; $('q').value = ''; render(); };
-$('vRas').onclick = () => { view = 'ras'; query = ''; $('q').value = ''; render(); };
-$('vCharts').onclick = () => { view = 'charts'; query = ''; $('q').value = ''; render(); };
 $('q').oninput = () => { query = $('q').value.trim(); render(); };
 $('side').onclick = ev => {
   const t = ev.target.closest('button'); if (!t) return;
@@ -1399,7 +1520,7 @@ const unloggedIn = (u, from, to) => data.entries.filter(e => e.date >= from && e
 // Aggiunge al Completed Work dei task le ore scoperte delle righe indicate e le scala dal Remaining Work, se c'è.
 // Una sola conferma per tutto, raggruppato per task; un task che fallisce non blocca gli altri.
 async function pushMany(ids) {
-  if (!adoReady()) return toast('Collega prima Azure DevOps (pulsante Sync Azure DevOps)');
+  if (!adoReady()) return toast('Collega prima Azure DevOps dalle Impostazioni');
   try {
     const es = ids.map(find).filter(Boolean);
     await fetchItems(es.map(e => e.task), true); // valori freschi: in cache possono essere vecchi
@@ -1470,12 +1591,14 @@ async function adoRefresh() {
 // La sync parte da sola a ogni apertura: l'arancione vuol dire che fallisce, o che la pagina è aperta da tanto.
 const SYNC_WARN_H = 24;
 function adoBtn() {
-  const b = $('ado'), at = data?.ado?.syncedAt, age = at ? (Date.now() - Date.parse(at)) / 36e5 : Infinity;
-  b.classList.toggle('primary', !adoReady());
-  b.classList.toggle('stale', adoReady() && age > SYNC_WARN_H);
-  const when = at ? new Date(at).toLocaleString('it-IT', {weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : 'mai';
-  b.title = !adoReady() ? 'Azure DevOps non collegato: clic per scegliere organizzazione, progetti e PAT'
-    : `${adoOrg()} · ${adoProjects().join(', ')}\nUltima sync riuscita: ${when}${age > SYNC_WARN_H ? ` (più di ${SYNC_WARN_H} ore fa)` : ''}\nClic per sincronizzare ora · Maiusc+clic per cambiare progetti o PAT`;
+  const b = $('ado'), at = data?.ado?.syncedAt, age = at ? (Date.now() - Date.parse(at)) / 36e5 : Infinity, ok = adoReady();
+  b.textContent = ok ? '⟳ Sincronizza' : 'Collega';
+  b.classList.toggle('primary', !ok);
+  $('adoDot').className = 'dot ' + (!ok ? 'off' : age > SYNC_WARN_H ? 'stale' : 'ok');
+  const short = at && (iso(new Date(at)) === today() ? 'oggi ' + new Date(at).toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'}) : new Date(at).toLocaleDateString('it-IT', {day:'numeric', month:'short'}));
+  $('adoSub').textContent = ok ? (at ? `Sync ${short}` : 'Mai sincronizzato') + ` · ${adoOrg()}` : 'Non collegato';
+  $('adoSub').title = ok ? adoProjects().join(', ') : '';
+  b.title = !ok ? 'Scegli organizzazione, progetti e token' : `Clic per sincronizzare ora · Maiusc+clic per cambiare progetti o token${age > SYNC_WARN_H ? `\nUltima sync riuscita più di ${SYNC_WARN_H} ore fa` : ''}`;
 }
 setInterval(() => data && adoBtn(), 10 * 60e3);
 // Con i dati su GitHub il PAT di Azure DevOps sta anche nel repo privato, in segreti.json (non in attivita.json,
@@ -1491,13 +1614,22 @@ async function savePatRemote() {
 }
 // Dialogo di collegamento: organizzazione, PAT e progetti, provati prima di salvarli. Ritorna true se collegato.
 const adoMsg = (m, err) => { $('adoMsg').textContent = m; $('adoMsg').classList.toggle('err', !!err); };
-function adoSetup() {
+let adoDone = null;
+function adoSetup(inline) {
   const f = $('fAdo');
   f.org.value = adoOrg() ?? ''; f.pat.value = pat ?? ''; f.projects.value = adoProjects().join(', ');
-  $('adoPrj').innerHTML = ''; adoMsg(store?.kind === 'github' ? 'Il PAT resta in questo browser e nel tuo repo privato (segreti.json): gli altri dispositivi lo prendono da lì.' : 'Il PAT resta salvato solo in questo browser.');
-  $('dlgAdo').showModal();
-  return new Promise(res => $('dlgAdo').addEventListener('close', () => res($('dlgAdo').returnValue === 'ok' && adoReady()), {once: true}));
+  $('adoPrj').innerHTML = ''; adoMsg(store?.kind === 'github' ? 'Il token resta in questo browser e nel tuo repo privato (segreti.json): gli altri dispositivi lo prendono da lì.' : 'Il token resta salvato solo in questo browser.');
+  $('adoSkip').textContent = inline ? 'Salta, lo faccio dopo' : 'Annulla';
+  if (inline) { $('wz2').append(f); wzStep(2); } else { $('dlgAdo').append(f); $('dlgAdo').showModal(); }
+  if (f.org.value && f.pat.value && !f.projects.value) $('adoLoad').click();
+  (f.org.value ? f.pat.value ? f.projects : f.pat : f.org).focus();
+  return new Promise(res => { adoDone = ok => { adoDone = null; if ($('dlgAdo').open) $('dlgAdo').close(); res(ok); }; });
 }
+$('adoSkip').onclick = () => adoDone?.(false);
+$('dlgAdo').addEventListener('close', () => adoDone?.(false));
+// con organizzazione e token scritti, l'elenco dei progetti arriva da solo
+$('fAdo').org.addEventListener('change', () => { if ($('fAdo').pat.value.trim()) $('adoLoad').click(); });
+$('fAdo').pat.addEventListener('change', () => { if ($('fAdo').org.value.trim()) $('adoLoad').click(); });
 $('adoLoad').onclick = async () => {
   const f = $('fAdo'), org = orgName(f.org.value), token = f.pat.value.trim();
   if (!org || !token) return adoMsg('Prima organizzazione e PAT', true);
@@ -1513,7 +1645,6 @@ $('adoLoad').onclick = async () => {
 };
 $('adoPrj').onchange = () => { $('fAdo').projects.value = [...$('adoPrj').querySelectorAll('input:checked')].map(i => i.value).join(', '); };
 $('fAdo').onsubmit = async ev => {
-  if (ev.submitter?.value !== 'ok') return;
   ev.preventDefault();
   const f = ev.target, org = orgName(f.org.value), token = f.pat.value.trim(), projects = splitProjects(f.projects.value);
   if (!org || !token || !projects.length) return adoMsg('Servono organizzazione, PAT e almeno un progetto', true);
@@ -1529,7 +1660,7 @@ $('fAdo').onsubmit = async ev => {
       if (org !== adoOrg()) data.ado.items = {};
       data.devops = {org, projects}; data.ado.syncedTo = null; save();
     }
-    $('dlgAdo').close('ok');
+    adoDone?.(true);
   } catch (err) { adoMsg(err.message, true); } finally { $('adoGo').disabled = false; }
 };
 async function adoStart() {
@@ -1541,13 +1672,18 @@ async function adoStart() {
     if (remote) { if (remote !== pat) { pat = remote; await kv('readwrite', st => st.put(pat, 'pat')); } }
     else if (pat) savePatRemote(); // primo avvio dopo il passaggio a GitHub: porto nel repo il PAT di questo browser
   }
-  // senza PAT lo chiedo subito, una volta per apertura: senza non arrivano né titoli né ore
-  if (!adoReady() && !await adoSetup()) return setStatus('DevOps non collegato', 'err');
-  adoBtn();
+  // primo avvio (nessuna organizzazione scelta): secondo passo della procedura guidata; token scaduto: dialogo
+  if (!adoReady()) {
+    const first = !adoOrg(), ok = await adoSetup(first);
+    if (first) enterApp();
+    if (!ok) { adoBtn(); return setStatus('DevOps non collegato', 'err'); }
+  }
+  adoBtn(); render();
   adoRefresh();
 }
 $('ado').onclick = async ev => {
-  if ((!adoReady() || ev.shiftKey) && !await adoSetup()) return;
+  if ((!adoReady() || ev.shiftKey) && !await adoSetup(false)) return;
+  adoBtn(); render();
   adoRefresh();
 };
 
