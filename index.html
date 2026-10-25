@@ -467,7 +467,8 @@
 <div id="toast"><span id="toastMsg"></span><button id="toastUndo">Annulla</button></div>
 
 <script>
-const H = 8;
+// ore di una giornata lavorativa: 8 salvo diversa impostazione (data.hoursPerDay, da Impostazioni)
+let H = 8;
 const DOW = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 const MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 let data, store, ver, view = 'diary', query = '', undoStack = [], saveTimer, saving = false, byDate, sugg;
@@ -543,6 +544,7 @@ function holidays(y) {
 }
 
 function reindex() {
+  H = +data.hoursPerDay > 0 ? +data.hoursPerDay : 8;
   byDate = new Map();
   for (const e of data.entries) (byDate.get(e.date) ?? byDate.set(e.date, []).get(e.date)).push(e);
   const m = new Map();
@@ -1089,8 +1091,10 @@ function settingsView() {
       <button class="${adoReady() ? 'btn' : 'primary'}" data-set="ado">${adoReady() ? 'Cambia organizzazione, progetti o token' : 'Collega Azure DevOps'}</button></div></section>
   <section class="set-card"><h3>Dove sono i tuoi dati</h3><p>Salvati su <b>${esc(store?.label ?? '')}</b>.</p>
     <div class="set-act">${gh ? '<button class="btn" data-set="qr">Collega un altro dispositivo</button>' : ''}<button class="btn" data-set="store">Cambia archivio</button></div></section>
-  <section class="set-card"><h3>Profilo</h3><p>Nome in testata: <b>${esc(name) || '—'}</b></p>
-    <div class="set-act"><button class="btn" data-set="name">Cambia nome</button></div></section>
+  <section class="set-card"><h3>Profilo e orario</h3><p>Nome in testata: <b>${esc(name) || '—'}</b></p>
+    <div class="set-act"><button class="btn" data-set="name">Cambia nome</button></div>
+    <p style="margin-top:16px">Ore in una giornata lavorativa: servono per le barre dei giorni, le ore attese degli sprint e le assenze di giornata intera.</p>
+    <div class="set-act"><label class="ico">Ore al giorno <input id="hpd" inputmode="decimal" value="${fmt(H)}" style="width:80px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:inherit;font:inherit"></label></div></section>
   <section class="set-card"><h3>Esporta</h3><p>Un CSV per settimana, mese o sprint, pronto per Excel.</p>
     <div class="set-act"><button class="btn" data-set="export">Esporta…</button></div></section>
   <section class="set-card"><h3>Scorciatoie da tastiera</h3><div class="keys">${$('help').innerHTML}</div></section>
@@ -1235,7 +1239,12 @@ function focusField(id, f) { const el = document.querySelector(`.row[data-id="${
 // modifica in cella: aggiorno solo i totali, senza ridisegnare (non perdo il focus)
 $('content').addEventListener('change', ev => {
   const t = ev.target;
-  if (t.id === 'chartSel') { chartSprint = t.value === '' ? null : +t.value; render(); }
+  if (t.id === 'hpd') {
+    const v = parseHours(t.value);
+    if (!(v >= 1 && v <= 12)) { t.value = fmt(H); return toast('Scrivi un numero di ore tra 1 e 12'); }
+    mutate(() => { data.hoursPerDay = v === 8 ? undefined : v; }, `Giornata lavorativa: ${fmt(v)} h`); render();
+  }
+  else if (t.id === 'chartSel') { chartSprint = t.value === '' ? null : +t.value; render(); }
   else if (t.dataset.abs) addAbsence(t.dataset.abs, t.value);
   else commit(t);
 });

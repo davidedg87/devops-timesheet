@@ -19,7 +19,7 @@ Object.assign(globalThis, {document: stub(), window: stub(), indexedDB: {open: s
 let T;
 (function () {
   eval(src + `;T = {imports, unlogged, merge, migrated, adoSprints, iterHours, syncSince, today, addDays, reindex, ghStore, b64enc, b64dec,
-    setStore: (s, v, b) => { store = s; ver = v; base = b; }, flush, get data() { return data; },
+    setStore: (s, v, b) => { store = s; ver = v; base = b; }, flush, get data() { return data; }, get H() { return H; },
     linkCfg, savePatRemote, orgName, splitProjects, setPat: p => { pat = p; },
     use: d => { data = migrated(d); reindex(); return data; }, setFetch: f => { adoFetch = f; }};`);
 })();
@@ -119,6 +119,11 @@ await check('organizzazione e progetti: nome dall\'URL, progetti senza doppioni;
   assert.equal(T.orgName('  Contoso '), 'Contoso');
   assert.deepEqual(T.splitProjects('A, B ,A,, C'), ['A', 'B', 'C']);
   assert.deepEqual(T.migrated(file([])).devops, {org: null, projects: []});
+});
+await check('ore al giorno: 8 di base, altrimenti quelle impostate', () => {
+  T.use(file([])); assert.equal(T.H, 8);
+  T.use(file([], {hoursPerDay: 7.5})); assert.equal(T.H, 7.5);
+  T.use(file([])); assert.equal(T.H, 8);
 });
 await check('formato vecchio: sprint a mano eliminati una volta sola, quelli DevOps rinominati', () => {
   const d = T.migrated(file([], {sprintDays: 14, sprints: [{name: 'Sprint 7', start: '2026-10-12', end: '2026-10-23'},
