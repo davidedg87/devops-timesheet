@@ -673,7 +673,8 @@ async function openStore(s, remember) {
   $('status').title = `Dati salvati su ${s.label} · clic per le impostazioni`;
   $('back').hidden = true;
   $('qDate').value = today();
-  if (adoOrg()) enterApp(); else wzStep(2); // primo avvio: secondo passo della procedura, collegare Azure DevOps
+  // primo avvio: secondo passo della procedura, collegare Azure DevOps (salvo averlo già saltato)
+  if (adoOrg() || data.devops.skipped) enterApp(); else wzStep(2);
   adoStart();
 }
 async function load(h) {
@@ -1774,10 +1775,12 @@ async function adoStart() {
     else if (pat) savePatRemote(); // primo avvio dopo il passaggio a GitHub: porto nel repo il PAT di questo browser
   }
   // primo avvio (nessuna organizzazione scelta): secondo passo della procedura guidata; token scaduto: dialogo
+  // "Salta" o "Annulla" valgono finché non lo collego io dalle Impostazioni: non lo richiedo a ogni apertura
   if (!adoReady()) {
+    if (data.devops.skipped) { adoBtn(); return setStatus('DevOps non collegato', 'err'); }
     const first = !adoOrg(), ok = await adoSetup(first);
     if (first) enterApp();
-    if (!ok) { adoBtn(); return setStatus('DevOps non collegato', 'err'); }
+    if (!ok) { mutate(() => { data.devops.skipped = true; }); adoBtn(); return setStatus('DevOps non collegato', 'err'); }
   }
   adoBtn(); render();
   adoRefresh();
