@@ -12,12 +12,12 @@ Diario ore personale che si compila da **Azure DevOps**. Scegli organizzazione e
 - **Export CSV** per settimana, mese o sprint, pronto per Excel.
 
 ## Dove stanno i dati
-Nessun server: la pagina è statica e i dati stanno in un file `attivita.json` che scegli tu, sul PC (es. in OneDrive) o in un tuo repo GitHub **privato**. Il PAT di Azure DevOps non finisce mai in `attivita.json`: resta nel browser e, con l'archivio GitHub, in `segreti.json` nello stesso repo privato.
+Nessun server: la pagina è statica e i dati stanno in un file `attivita.json` in un tuo repo GitHub **privato**, così li ritrovi su ogni PC e sul telefono. Il PAT di Azure DevOps non finisce mai in `attivita.json`: resta nel browser e, con l'archivio GitHub, in `segreti.json` nello stesso repo privato.
 
 ## Per iniziare
-1. Apri la pagina e scegli dove tenere i dati.
-2. Al primo avvio indica l'organizzazione Azure DevOps, un Personal Access Token con **Work Items: Read & write** (più **Project and Team: Read** per scegliere i progetti da un elenco) e i progetti da seguire.
-3. Per cambiare progetti o PAT più avanti: Maiusc+clic su **Sync Azure DevOps**.
+1. Apri la pagina, indica il tuo repo GitHub privato e un token *fine-grained* con **Contents: Read and write** su quel repo.
+2. Poi incolla un Personal Access Token di Azure DevOps con **Work Items: Read & write** (più **Project and Team: Read** per scegliere i progetti da un elenco) e scegli organizzazione e progetti (puoi anche farlo dopo).
+3. Per cambiare progetti o token più avanti: **Impostazioni → Azure DevOps**.
 
 ## Sviluppo
 Un solo file, `index.html`, senza build. I controlli sulla logica (import, unione dei file, sprint, configurazione) girano con `node checks.mjs`.
