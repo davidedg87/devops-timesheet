@@ -925,12 +925,12 @@ function sprintName(a, b) {
   const x = parseIso(a), y = parseIso(b);
   return `Sprint ${x.getDate()}${x.getMonth() === y.getMonth() ? '' : ' ' + mon3(x)}–${y.getDate()} ${mon3(y)}`;
 }
-// ore di lavoro per iterazione DevOps dei task in un intervallo (le assenze non contano), dalla più lavorata
+// ore di lavoro per iterazione (e area) DevOps dei task in un intervallo (le assenze non contano), dalla più lavorata
 function iterHours(from, to, withNone = true) {
   const by = {};
   for (const e of data.entries) {
     if (e.date < from || e.date > to || e.absence || !+e.hours) continue;
-    const k = iterName(e.task) || (withNone ? 'senza task DevOps' : null);
+    const k = iterArea(e.task) || (withNone ? 'senza task DevOps' : null);
     if (k) by[k] = (by[k] ?? 0) + +e.hours;
   }
   return Object.entries(by).sort((a, b) => b[1] - a[1]);
@@ -990,12 +990,12 @@ function syncExport() {
 function exportCsv({from, to, label}) {
   const rows = data.entries.filter(e => e.date >= from && e.date <= to);
   const cell = v => { v = v == null ? '' : String(v); return /[";\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
-  const head = ['Data', 'Giorno', 'Attività', 'Task', 'Descrizione task', 'US', 'Descrizione US', 'Iterazione', 'Codice assenza', 'Causale assenza', 'Ore', 'Commessa', 'Note'];
+  const head = ['Data', 'Giorno', 'Attività', 'Task', 'Descrizione task', 'US', 'Descrizione US', 'Iterazione', 'Area', 'Codice assenza', 'Causale assenza', 'Ore', 'Commessa', 'Note'];
   const lines = rows.map(e => {
     const w = isWi(e.task) ? wi(e.task) : null, p = w?.parent ? wi(w.parent) : null;
-    return [e.date.split('-').reverse().join('/'), DOW[parseIso(e.date).getDay()], e.activity, e.task, w?.title, w?.parent, p?.title, iterName(e.task), e.absence, e.absence && CODE[e.absence]?.causale, fmt(rowHours(e)), e.commessa, e.note];
+    return [e.date.split('-').reverse().join('/'), DOW[parseIso(e.date).getDay()], e.activity, e.task, w?.title, w?.parent, p?.title, iterName(e.task), areaName(e.task), e.absence, e.absence && CODE[e.absence]?.causale, fmt(rowHours(e)), e.commessa, e.note];
   });
-  lines.push([], ['', '', 'Totale', '', '', '', '', '', '', fmt(rows.reduce((s, e) => s + rowHours(e), 0))]);
+  lines.push([], ['', '', 'Totale', '', '', '', '', '', '', '', fmt(rows.reduce((s, e) => s + rowHours(e), 0))]);
   const csv = '﻿' + [head, ...lines].map(r => r.map(cell).join(';')).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'})); a.download = `attivita_${label}.csv`; a.click();
@@ -1238,7 +1238,10 @@ const isWi = t => /^\d+$/.test(t ?? '');
 const wi = id => data.ado.items[id];
 const wiUrl = id => `${ADO}/${ADO_PRJ}/_workitems/edit/${id}`;
 const iterName = t => isWi(t) ? wi(t)?.iter?.split('\\').pop() : undefined; // "M2C-Sprint8-R2"
-const wiTip = id => wi(id) ? `${wi(id).type} ${id} — ${wi(id).title}${wi(id).state ? ` [${wi(id).state}]` : ''}${iterName(id) ? ` · ${iterName(id)}` : ''}` : isWi(id) ? (pat ? 'Descrizione non disponibile su Azure DevOps' : 'Collega Azure DevOps (pulsante Sync Azure DevOps) per vedere descrizione e US') : '';
+// ambito del task dall'Area Path: "…\M2C Credit R2" → "Credit"
+const areaName = t => isWi(t) ? wi(t)?.area?.split('\\').pop().replace(/^(M2C|MDM)\s*-?\s*/i, '').replace(/\s*-?\s*R\d+$/i, '') || undefined : undefined;
+const iterArea = t => iterName(t) && [iterName(t), areaName(t)].filter(Boolean).join(' · ');
+const wiTip = id => wi(id) ? `${wi(id).type} ${id} — ${wi(id).title}${wi(id).state ? ` [${wi(id).state}]` : ''}${iterArea(id) ? ` · ${iterArea(id)}` : ''}` : isWi(id) ? (pat ? 'Descrizione non disponibile su Azure DevOps' : 'Collega Azure DevOps (pulsante Sync Azure DevOps) per vedere descrizione e US') : '';
 const wiLink = id => isWi(id) ? `<a href="${wiUrl(id)}" target="_blank" rel="noopener" title="${esc(wiTip(id) || 'Apri su Azure DevOps')}">↗</a>` : '';
 const usLink = id => { const p = isWi(id) && wi(id)?.parent; return p ? `<a class="mono" href="${wiUrl(p)}" target="_blank" rel="noopener" title="${esc(wiTip(p))}">${p}</a>` : ''; };
 const addDays = (k, n) => { const d = parseIso(k); d.setDate(d.getDate() + n); return iso(d); };
@@ -1256,7 +1259,7 @@ async function adoFetch(path, body, method = body ? 'POST' : 'GET') {
   return r.json();
 }
 const CW = 'Microsoft.VSTS.Scheduling.CompletedWork', RW = 'Microsoft.VSTS.Scheduling.RemainingWork';
-const cacheItem = w => { const f = w.fields; data.ado.items[w.id] = {title:f['System.Title'], type:f['System.WorkItemType'], parent:f['System.Parent'] ?? null, completed:f[CW] ?? null, remaining:f[RW] ?? null, rev:w.rev, state:f['System.State'], iter:f['System.IterationPath']}; };
+const cacheItem = w => { const f = w.fields; data.ado.items[w.id] = {title:f['System.Title'], type:f['System.WorkItemType'], parent:f['System.Parent'] ?? null, completed:f[CW] ?? null, remaining:f[RW] ?? null, rev:w.rev, state:f['System.State'], iter:f['System.IterationPath'], area:f['System.AreaPath'] ?? null}; };
 const CLOSED = /^(closed|done|removed|resolved)$/i;
 const isClosed = id => CLOSED.test(wi(id)?.state ?? '');
 function adoError(err) {
@@ -1265,10 +1268,10 @@ function adoError(err) {
 }
 // titolo, tipo, padre e ore dei work item (e dei loro padri) che non ho in cache, o di tutti con force; ritorna quanti ne ha scaricati
 async function fetchItems(ids, force) {
-  const todo = [...new Set(ids.filter(isWi).map(String))].filter(id => force || !wi(id));
+  const todo = [...new Set(ids.filter(isWi).map(String))].filter(id => force || wi(id)?.area === undefined); // senza area = scaricato prima che la leggessi
   let n = 0;
   for (let i = 0; i < todo.length; i += 200) {
-    const r = await adoFetch(`_apis/wit/workitems?ids=${todo.slice(i, i + 200).join(',')}&fields=System.Title,System.WorkItemType,System.Parent,System.State,System.IterationPath,${CW},${RW}&errorPolicy=omit`);
+    const r = await adoFetch(`_apis/wit/workitems?ids=${todo.slice(i, i + 200).join(',')}&fields=System.Title,System.WorkItemType,System.Parent,System.State,System.IterationPath,System.AreaPath,${CW},${RW}&errorPolicy=omit`);
     for (const w of r.value) if (w) { n++; cacheItem(w); }
   }
   const parents = todo.map(id => wi(id)?.parent).filter(p => p && !wi(p));
