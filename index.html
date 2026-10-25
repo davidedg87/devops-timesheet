@@ -6,6 +6,7 @@
 <title>DevOps Timesheet</title>
 <!-- installabile come app (Chrome/Edge: icona "Installa" nella barra degli indirizzi) -->
 <link rel="manifest" href="manifest.webmanifest">
+<script>try { const t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}</script>
 <link rel="icon" href="icon-192.png">
 <meta name="theme-color" content="#0078d4">
 <style>
@@ -16,10 +17,16 @@
     --shadow: 0 1px 2px rgba(16,24,40,.05);
     --s1:#0078d4; --s2:#ca5010;
   }
-  @media (prefers-color-scheme: dark) { :root {
+  /* tema: automatico (segue il sistema) salvo scelta in Impostazioni (data-theme su <html>) */
+  @media (prefers-color-scheme: dark) { :root:not([data-theme=light]) {
     --bg:#1b1a19; --card:#252423; --fg:#f3f2f1; --muted:#b3b0ad; --faint:#797775; --line:#3b3a39; --hover:#323130;
     --accent:#479ef5; --accent-bg:#0f6cbd; --on-accent:#fff; --accent-soft:#0c2d4a; --warn:#f0b45a; --warn-soft:#2e2414; --bad:#f87171; --ok:#34d399; --we:#16171b;
     --shadow:none; --s1:#479ef5; --s2:#e3742a; } }
+  :root[data-theme=dark] {
+    --bg:#1b1a19; --card:#252423; --fg:#f3f2f1; --muted:#b3b0ad; --faint:#797775; --line:#3b3a39; --hover:#323130;
+    --accent:#479ef5; --accent-bg:#0f6cbd; --on-accent:#fff; --accent-soft:#0c2d4a; --warn:#f0b45a; --warn-soft:#2e2414; --bad:#f87171; --ok:#34d399; --we:#16171b;
+    --shadow:none; --s1:#479ef5; --s2:#e3742a; }
+  :root[data-theme=light] { color-scheme:light; } :root[data-theme=dark] { color-scheme:dark; }
   * { box-sizing:border-box; }
   [hidden] { display:none !important; }
   html { color-scheme:light dark; }
@@ -78,6 +85,9 @@
   .set-card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 20px; box-shadow:var(--shadow); }
   .set-card h3 { margin:0 0 6px; font-size:16px; display:flex; align-items:center; gap:8px; }
   .set-card p { margin:0 0 6px; color:var(--muted); } .set-card p b { color:var(--fg); }
+  .seg-btn { display:inline-flex; background:var(--hover); padding:3px; border-radius:10px; margin-top:8px; }
+  .seg-btn button { padding:6px 16px; color:var(--muted); font-weight:500; }
+  .seg-btn button.on { background:var(--card); color:var(--fg); box-shadow:0 1px 3px rgba(0,0,0,.15); }
   .set-act { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
   .pill { display:inline-block; padding:2px 10px; border-radius:20px; background:var(--accent-soft); color:var(--accent); font-size:13px; font-weight:600; margin:2px 4px 2px 0; }
   .keys { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:6px 16px; font-size:13px; color:var(--muted); }
@@ -1118,6 +1128,8 @@ function settingsView() {
       <button class="${adoReady() ? 'btn' : 'primary'}" data-set="ado">${adoReady() ? 'Cambia organizzazione, progetti o token' : 'Collega Azure DevOps'}</button></div></section>
   <section class="set-card"><h3>Dove sono i tuoi dati</h3><p>Salvati su <b>${esc(store?.label ?? '')}</b>.</p>
     <div class="set-act">${gh ? '<button class="btn" data-set="qr">Collega un altro dispositivo</button>' : ''}<button class="btn" data-set="store">Cambia archivio</button></div></section>
+  <section class="set-card"><h3>Tema</h3><p>Automatico segue il tema del PC o del telefono. La scelta vale per questo dispositivo.</p>
+    <div class="seg-btn">${[['auto', 'Automatico'], ['light', 'Chiaro'], ['dark', 'Scuro']].map(([v, l]) => `<button data-theme-set="${v}" class="${(document.documentElement.dataset.theme || 'auto') === v ? 'on' : ''}">${l}</button>`).join('')}</div></section>
   <section class="set-card"><h3>Profilo e orario</h3><p>Nome in testata: <b>${esc(name) || '—'}</b></p>
     <div class="set-act"><button class="btn" data-set="name">Cambia nome</button></div>
     <p style="margin-top:16px">Ore in una giornata lavorativa: servono per le barre dei giorni, le ore attese degli sprint e le assenze di giornata intera.</p>
@@ -1130,6 +1142,12 @@ function settingsView() {
   </div>`;
 }
 $('content').addEventListener('click', async ev => {
+  const th = ev.target.closest('[data-theme-set]')?.dataset.themeSet;
+  if (th) {
+    if (th === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = th;
+    try { th === 'auto' ? localStorage.removeItem('theme') : localStorage.setItem('theme', th); } catch {}
+    return render();
+  }
   const a = ev.target.closest('[data-set]')?.dataset.set; if (!a) return;
   if (a === 'sync') adoRefresh();
   else if (a === 'ado') { if (await adoSetup(false)) { adoBtn(); render(); adoRefresh(); } }

@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 
 const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
-const src = html.split('<script>')[1].split('</script>')[0];
+const src = html.split('<script>').pop().split('</script>')[0]; // lo script principale è l'ultimo (il primo applica solo il tema)
 
 // DOM finto: basta che gli accessi della pagina al caricamento non esplodano
 const stub = () => new Proxy(function () {}, {
