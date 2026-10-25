@@ -440,7 +440,7 @@
   <h3>Collega Azure DevOps</h3>
   <ol class="howto">
     <li>Su Azure DevOps apri <b>User settings → Personal access tokens</b> e crea un token con <b>Work Items: Read &amp; write</b>. Aggiungi <b>Project and Team: Read</b> per scegliere i progetti da un elenco.</li>
-    <li>Scrivi organizzazione e token: l'elenco dei progetti compare da solo. Spunta quelli da cui leggere le ore.</li>
+    <li>Scrivi l'<b>organizzazione</b> (la parola subito dopo <i>dev.azure.com/</i> nell'indirizzo che usi) e il token: l'elenco dei progetti compare da solo. Spunta quelli da cui leggere le ore, oppure scrivi i nomi a mano.</li>
   </ol>
   <label class="fld">Organizzazione <input name="org" required placeholder="nome, o https://dev.azure.com/nome" autocomplete="off"></label>
   <label class="fld">PAT <input name="pat" type="password" required autocomplete="off"></label>
@@ -1632,7 +1632,7 @@ $('fAdo').org.addEventListener('change', () => { if ($('fAdo').pat.value.trim())
 $('fAdo').pat.addEventListener('change', () => { if ($('fAdo').org.value.trim()) $('adoLoad').click(); });
 $('adoLoad').onclick = async () => {
   const f = $('fAdo'), org = orgName(f.org.value), token = f.pat.value.trim();
-  if (!org || !token) return adoMsg('Prima organizzazione e PAT', true);
+  if (!org || !token) { (org ? $('fAdo').pat : $('fAdo').org).focus(); return adoMsg(org ? 'Manca il token' : "Scrivi prima l'organizzazione: la parola dopo dev.azure.com/ nel tuo indirizzo", true); }
   adoMsg('Carico i progetti…');
   try {
     const r = await adoFetch('_apis/projects?$top=500', null, 'GET', org, token);
