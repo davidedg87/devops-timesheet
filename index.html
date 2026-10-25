@@ -297,6 +297,8 @@
   #dlgStore .dl-foot { flex-wrap:wrap; }
   #fAdo .fld { grid-template-columns:110px 1fr; }
   #fAdo h3 { font-size:18px; }
+  .orgbox { display:grid; gap:6px; min-width:0; } .orgbox select { width:100%; padding:8px 10px; }
+  .wz select { border:1px solid var(--line); border-radius:9px; background:var(--bg); color:inherit; font:inherit; }
   .wz #fAdo h3 { font-size:20px; margin-bottom:10px; }
   .fld { display:grid; grid-template-columns:70px 1fr; gap:8px; align-items:center; margin-bottom:8px; font-size:13px; color:var(--muted); }
   #status { cursor:pointer; } #status:hover { color:var(--accent); }
@@ -439,11 +441,11 @@
 <dialog id="dlgAdo"><form id="fAdo" autocomplete="off">
   <h3>Collega Azure DevOps</h3>
   <ol class="howto">
-    <li>Su Azure DevOps apri <b>User settings → Personal access tokens</b> e crea un token con <b>Work Items: Read &amp; write</b>. Aggiungi <b>Project and Team: Read</b> per scegliere i progetti da un elenco.</li>
-    <li>Scrivi l'<b>organizzazione</b> (la parola subito dopo <i>dev.azure.com/</i> nell'indirizzo che usi) e il token: l'elenco dei progetti compare da solo. Spunta quelli da cui leggere le ore, oppure scrivi i nomi a mano.</li>
+    <li>Su Azure DevOps apri <b>User settings → Personal access tokens</b> e crea un token per <b>All accessible organizations</b> con i permessi <b>Work Items: Read &amp; write</b>, <b>Project and Team: Read</b> e <b>User Profile: Read</b>.</li>
+    <li>Incolla il token: compaiono le tue organizzazioni e poi i progetti. Spunta quelli da cui leggere le ore.</li>
   </ol>
-  <label class="fld">Organizzazione <input name="org" required placeholder="nome, o https://dev.azure.com/nome" autocomplete="off"></label>
-  <label class="fld">PAT <input name="pat" type="password" required autocomplete="off"></label>
+  <label class="fld">Token <input name="pat" type="password" required autocomplete="off" placeholder="Personal Access Token"></label>
+  <label class="fld">Organizzazione <span class="orgbox"><select name="orgSel" hidden></select><input name="org" required placeholder="compare dopo il token, o scrivila tu" autocomplete="off"></span></label>
   <label class="fld">Progetti <input name="projects" required placeholder="Progetto A, Progetto B" autocomplete="off"></label>
   <div id="adoPrj"></div>
   <p class="sub" id="adoMsg" aria-live="polite"></p>
@@ -1621,15 +1623,50 @@ function adoSetup(inline) {
   $('adoPrj').innerHTML = ''; adoMsg(store?.kind === 'github' ? 'Il token resta in questo browser e nel tuo repo privato (segreti.json): gli altri dispositivi lo prendono da lì.' : 'Il token resta salvato solo in questo browser.');
   $('adoSkip').textContent = inline ? 'Salta, lo faccio dopo' : 'Annulla';
   if (inline) { $('wz2').append(f); wzStep(2); } else { $('dlgAdo').append(f); $('dlgAdo').showModal(); }
-  if (f.org.value && f.pat.value && !f.projects.value) $('adoLoad').click();
-  (f.org.value ? f.pat.value ? f.projects : f.pat : f.org).focus();
+  f.orgSel.hidden = true; f.org.hidden = false;
+  if (f.pat.value) loadOrgs(); // con il token già noto, organizzazioni (e poi progetti) arrivano da sole
+  (f.pat.value ? f.org.value ? f.projects : f.org : f.pat).focus();
   return new Promise(res => { adoDone = ok => { adoDone = null; if ($('dlgAdo').open) $('dlgAdo').close(); res(ok); }; });
 }
 $('adoSkip').onclick = () => adoDone?.(false);
 $('dlgAdo').addEventListener('close', () => adoDone?.(false));
 // con organizzazione e token scritti, l'elenco dei progetti arriva da solo
+// Organizzazioni del token: profilo → account di cui sono membro. Serve un token per tutte le organizzazioni
+// con User Profile: Read; se non va, l'organizzazione si scrive a mano.
+async function adoOrgList(token) {
+  const vs = async path => {
+    const r = await fetch(`https://app.vssps.visualstudio.com/_apis/${path}${path.includes('?') ? '&' : '?'}api-version=7.1`, {headers: {Authorization: adoAuth(token)}});
+    if (!r.ok || r.status === 203) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  };
+  const me = await vs('profile/profiles/me');
+  return (await vs(`accounts?memberId=${me.id}`)).value.map(a => a.accountName).sort((a, b) => a.localeCompare(b));
+}
+async function loadOrgs() {
+  const f = $('fAdo'), token = f.pat.value.trim(); if (!token) return;
+  adoMsg('Cerco le tue organizzazioni…');
+  try {
+    const orgs = await adoOrgList(token);
+    if (!orgs.length) throw new Error('nessuna');
+    const cur = orgName(f.org.value);
+    f.orgSel.innerHTML = orgs.map(o => `<option>${esc(o)}</option>`).join('') + '<option value="">Altra (la scrivo io)…</option>';
+    f.orgSel.value = orgs.includes(cur) ? cur : orgs[0];
+    f.orgSel.hidden = false; f.org.hidden = true; f.org.value = f.orgSel.value;
+    adoMsg(orgs.length > 1 ? 'Scegli l\'organizzazione' : ''); $('adoLoad').click();
+  } catch {
+    f.orgSel.hidden = true; f.org.hidden = false;
+    if (f.org.value.trim()) return $('adoLoad').click();
+    adoMsg('Con questo token non riesco a elencare le organizzazioni: serve un token per "All accessible organizations" con User Profile: Read. Oppure scrivila a mano: è la parola dopo dev.azure.com/ nel tuo indirizzo.', true);
+    f.org.focus();
+  }
+}
+$('fAdo').orgSel.addEventListener('change', () => {
+  const f = $('fAdo');
+  if (f.orgSel.value) { f.org.value = f.orgSel.value; f.org.hidden = true; f.projects.value = ''; $('adoLoad').click(); }
+  else { f.org.value = ''; f.org.hidden = false; f.org.focus(); }
+});
 $('fAdo').org.addEventListener('change', () => { if ($('fAdo').pat.value.trim()) $('adoLoad').click(); });
-$('fAdo').pat.addEventListener('change', () => { if ($('fAdo').org.value.trim()) $('adoLoad').click(); });
+$('fAdo').pat.addEventListener('change', loadOrgs);
 $('adoLoad').onclick = async () => {
   const f = $('fAdo'), org = orgName(f.org.value), token = f.pat.value.trim();
   if (!org || !token) { (org ? $('fAdo').pat : $('fAdo').org).focus(); return adoMsg(org ? 'Manca il token' : "Scrivi prima l'organizzazione: la parola dopo dev.azure.com/ nel tuo indirizzo", true); }
