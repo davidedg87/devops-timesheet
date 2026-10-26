@@ -46,6 +46,24 @@ await check('riga importata e poi cancellata a mano: non torna', () => {
   assert.equal(T.imports([{id: '1', date: '2026-10-14', hours: 6}], '2026-10-10').length, 0);
 });
 
+await check('stesso task, nuove ore nello stesso giorno su DevOps (anche a task chiuso): arriva la differenza', () => {
+  const d = T.use(file([]));
+  d.entries.push(...T.imports([{id: '1', date: '2026-10-14', hours: 6}], '2026-10-10')); T.reindex();
+  assert.deepEqual(T.imports([{id: '1', date: '2026-10-14', hours: 8}], '2026-10-10').map(e => e.hours), [2]);
+});
+await check('riga cancellata a mano: non torna, ma le ore aggiunte dopo sì', () => {
+  const d = T.use(file([]));
+  T.imports([{id: '1', date: '2026-10-14', hours: 6}], '2026-10-10');
+  d.entries = [];
+  assert.equal(T.imports([{id: '1', date: '2026-10-14', hours: 6}], '2026-10-10').length, 0);
+  assert.deepEqual(T.imports([{id: '1', date: '2026-10-14', hours: 8}], '2026-10-10').map(e => e.hours), [2]);
+});
+await check('file vecchio (chiavi già viste senza ore): solo gli aumenti successivi', () => {
+  const d = T.use(file([], {ado: {items: {}, seen: ['1@2026-10-14'], syncedTo: null}}));
+  assert.equal(T.imports([{id: '1', date: '2026-10-14', hours: 6}], '2026-10-10').length, 0);
+  assert.deepEqual(T.imports([{id: '1', date: '2026-10-14', hours: 7}], '2026-10-10').map(e => e.hours), [1]);
+});
+
 // ---------- ore non ancora su DevOps ----------
 await check('ore scoperte attribuite alle righe più recenti del task', () => {
   const d = T.use(file([E('2026-10-13', '7', 3), E('2026-10-14', '7', 3)]));

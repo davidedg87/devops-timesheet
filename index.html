@@ -738,7 +738,7 @@ function merge(b, local, disk) {
   for (const k of Object.keys(local)) if (k !== 'entries' && k !== 'ado' && JSON.stringify(local[k]) !== JSON.stringify(b[k])) res[k] = local[k];
   const uniq = a => [...new Map(a.map(x => [JSON.stringify(x), x])).values()];
   const latest = (...v) => v.filter(Boolean).sort().pop(); // sort() da solo mette gli undefined in fondo
-  res.ado = {...disk.ado, items: {...disk.ado.items, ...local.ado.items}, seen: uniq([...disk.ado.seen, ...local.ado.seen]),
+  res.ado = {...disk.ado, items: {...disk.ado.items, ...local.ado.items}, seen: uniq([...disk.ado.seen, ...local.ado.seen]), seenH: {...disk.ado.seenH, ...local.ado.seenH},
     pushed: uniq([...disk.ado.pushed, ...local.ado.pushed]), syncedTo: latest(disk.ado.syncedTo, local.ado.syncedTo), syncedAt: latest(disk.ado.syncedAt, local.ado.syncedAt), me: local.ado.me ?? disk.ado.me};
   return res;
 }
@@ -1541,14 +1541,20 @@ async function adoFind(since) {
 // DevOps in ordine di data; si importa solo la parte scoperta, nel giorno in cui risulta su DevOps.
 function imports(found, since) {
   const from = addDays(since, -3), credit = {}, seen = new Set(data.ado.seen), out = [];
+  // ore DevOps già considerate per task@giorno: una riga cancellata a mano non torna, ma un'aggiunta successiva sullo stesso task
+  // nello stesso giorno sì (per le chiavi vecchie, senza ore, vale come già considerato tutto quello che c'era)
+  const handled = data.ado.seenH ??= {};
   for (const e of data.entries) if (e.task && e.hours && e.date >= from) credit[e.task] = (credit[e.task] ?? 0) + +e.hours;
   // ore di giorni vecchi caricate da qui di recente: l'incremento su DevOps è recente, la riga del diario è fuori finestra
   for (const p of data.ado.pushed) if (p.at >= from && p.date < from) credit[p.task] = (credit[p.task] ?? 0) + p.hours;
   for (const f of found.sort((a, b) => a.date.localeCompare(b.date))) {
-    const take = Math.min(credit[f.id] ?? 0, f.hours), rest = +(f.hours - take).toFixed(2), key = `${f.id}@${f.date}`;
+    const take = Math.min(credit[f.id] ?? 0, f.hours), key = `${f.id}@${f.date}`;
     credit[f.id] = (credit[f.id] ?? 0) - take;
-    if (rest <= 0 || seen.has(key)) continue;
-    seen.add(key); // una riga importata e poi cancellata a mano non deve tornare
+    const prev = handled[key] ?? (seen.has(key) ? f.hours : 0);
+    const rest = +Math.min(f.hours - take, f.hours - prev).toFixed(2);
+    handled[key] = Math.max(prev, f.hours);
+    if (rest <= 0) continue;
+    seen.add(key);
     out.push(newEntry(f.date, {activity: wi(f.id)?.title ?? `Task ${f.id}`, task: f.id, hours: rest, ado: true}));
   }
   data.ado.seen = [...seen];
