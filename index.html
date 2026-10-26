@@ -571,6 +571,13 @@ const migrate = () => {
   data.sprints ??= []; data.sprintSkip ??= [];
   data.devops ??= {org:null, projects:[]}; // organizzazione e progetti Azure DevOps scelti nel dialogo di collegamento
   data.ado.pushed ??= []; // ore caricate su DevOps da qui: {task, date del diario, at = giorno del caricamento, hours}
+  // modifiche di DevOps già applicate (task#revisione); con un file che usava il vecchio import parto dall'ultima sync
+  if (!data.ado.applied) {
+    data.ado.applied = []; data.ado.cutoff = data.ado.syncedAt ?? null;
+    // righe scritte a mano su task: già abbinate a DevOps, tranne la parte che risulta non ancora caricata
+    const u = data.ado.syncedAt ? unlogged() : null; // mai sincronizzato: niente da abbinare
+    if (u) for (const e of data.entries) if (!e.ado && e.task && +e.hours > 0) e.matched = +(+e.hours - (u.get(e.id) ?? 0)).toFixed(2);
+  }
   // l'allattamento era un flag per giorno: diventa un'assenza ALL da 2 h, solo nei giorni con ore lavorate
   if (data.days) {
     for (const [k, v] of Object.entries(data.days))
@@ -739,7 +746,7 @@ function merge(b, local, disk) {
   const uniq = a => [...new Map(a.map(x => [JSON.stringify(x), x])).values()];
   const latest = (...v) => v.filter(Boolean).sort().pop(); // sort() da solo mette gli undefined in fondo
   res.ado = {...disk.ado, items: {...disk.ado.items, ...local.ado.items}, seen: uniq([...disk.ado.seen, ...local.ado.seen]), seenH: {...disk.ado.seenH, ...local.ado.seenH},
-    pushed: uniq([...disk.ado.pushed, ...local.ado.pushed]), syncedTo: latest(disk.ado.syncedTo, local.ado.syncedTo), syncedAt: latest(disk.ado.syncedAt, local.ado.syncedAt), me: local.ado.me ?? disk.ado.me};
+    pushed: uniq([...disk.ado.pushed, ...local.ado.pushed]), applied: uniq([...(disk.ado.applied ?? []), ...(local.ado.applied ?? [])]), cutoff: disk.ado.cutoff ?? local.ado.cutoff, syncedTo: latest(disk.ado.syncedTo, local.ado.syncedTo), syncedAt: latest(disk.ado.syncedAt, local.ado.syncedAt), me: local.ado.me ?? disk.ado.me};
   return res;
 }
 function save() {
@@ -1518,47 +1525,76 @@ async function adoFind(since) {
   const prj = adoProjects().map(p => `'${p.replace(/'/g, "''")}'`).join(', ');
   const q = await adoFetch(`_apis/wit/wiql`, {query: `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] IN (${prj}) AND [System.WorkItemType] = 'Task' AND [System.ChangedDate] >= '${since}' AND ([System.AssignedTo] = @Me OR [System.ChangedBy] = @Me)`});
   const ids = q.workItems.map(w => String(w.id));
-  // ponytail: una pagina di revisioni per task (200), basta finché un task non ne accumula di più
-  // a gruppi di 20: dall'inizio dell'anno i task possono essere centinaia, tutti insieme Azure DevOps rallenta o rifiuta
+  // tutte le revisioni di ogni task, a pagine da 200 (l'API le dà dalla più vecchia: senza paginare le ultime si perdono)
+  // a gruppi di 20 task: dall'inizio dell'anno possono essere centinaia, tutti insieme Azure DevOps rallenta o rifiuta
+  const allUpdates = async id => {
+    const out = [];
+    for (let skip = 0; skip < 2000; skip += 200) {
+      const page = (await adoFetch(`_apis/wit/workitems/${id}/updates?$top=200&$skip=${skip}`)).value;
+      out.push(...page); if (page.length < 200) break;
+    }
+    return out;
+  };
   const hist = [];
-  for (let i = 0; i < ids.length; i += 20) hist.push(...await Promise.all(ids.slice(i, i + 20).map(id => adoFetch(`_apis/wit/workitems/${id}/updates?$top=200`))));
+  for (let i = 0; i < ids.length; i += 20) hist.push(...await Promise.all(ids.slice(i, i + 20).map(allUpdates)));
+  // una voce per ogni modifica di Completed Work fatta da me: in più o in meno, con la revisione che la identifica
   const found = [];
   ids.forEach((id, i) => {
-    const perDay = {};
-    for (const u of hist[i].value) {
-      const cw = u.fields?.['Microsoft.VSTS.Scheduling.CompletedWork'], at = u.fields?.['System.ChangedDate']?.newValue;
+    for (const u of hist[i]) {
+      const cw = u.fields?.[CW], at = u.fields?.['System.ChangedDate']?.newValue;
       if (!cw || !at || u.revisedBy?.uniqueName?.toLowerCase() !== me) continue;
-      const day = iso(new Date(at));
-      if (day >= since) perDay[day] = (perDay[day] ?? 0) + (cw.newValue ?? 0) - (cw.oldValue ?? 0);
+      const delta = +((cw.newValue ?? 0) - (cw.oldValue ?? 0)).toFixed(2), day = iso(new Date(at));
+      if (delta && day >= since) found.push({task: id, rev: u.rev, at, day, delta});
     }
-    for (const [date, h] of Object.entries(perDay)) if (h > 0) found.push({id, date, hours: +h.toFixed(2)});
   });
   await fetchItems(ids, true);
   return found;
 }
-// Le ore su DevOps spesso le carico il giorno dopo: non confronto giorno per giorno ma per task.
-// Le ore che il diario ha già per quel task (da qualche giorno prima della finestra) coprono gli incrementi
-// DevOps in ordine di data; si importa solo la parte scoperta, nel giorno in cui risulta su DevOps.
-function imports(found, since) {
-  const from = addDays(since, -3), credit = {}, seen = new Set(data.ado.seen), out = [];
-  // ore DevOps già considerate per task@giorno: una riga cancellata a mano non torna, ma un'aggiunta successiva sullo stesso task
-  // nello stesso giorno sì (per le chiavi vecchie, senza ore, vale come già considerato tutto quello che c'era)
-  const handled = data.ado.seenH ??= {};
-  for (const e of data.entries) if (e.task && e.hours && e.date >= from) credit[e.task] = (credit[e.task] ?? 0) + +e.hours;
-  // ore di giorni vecchi caricate da qui di recente: l'incremento su DevOps è recente, la riga del diario è fuori finestra
-  for (const p of data.ado.pushed) if (p.at >= from && p.date < from) credit[p.task] = (credit[p.task] ?? 0) + p.hours;
-  for (const f of found.sort((a, b) => a.date.localeCompare(b.date))) {
-    const take = Math.min(credit[f.id] ?? 0, f.hours), key = `${f.id}@${f.date}`;
-    credit[f.id] = (credit[f.id] ?? 0) - take;
-    const prev = handled[key] ?? (seen.has(key) ? f.hours : 0);
-    const rest = +Math.min(f.hours - take, f.hours - prev).toFixed(2);
-    handled[key] = Math.max(prev, f.hours);
-    if (rest <= 0) continue;
-    seen.add(key);
-    out.push(newEntry(f.date, {activity: wi(f.id)?.title ?? `Task ${f.id}`, task: f.id, hours: rest, ado: true}));
+// Ogni modifica di Completed Work fatta da me su Azure DevOps si applica una volta sola (chiave task#revisione):
+// - in più: prima copre le righe scritte a mano nel diario per quel task nell'ultima settimana e non ancora "abbinate"
+//   (le ore che scrivo qui e poi riporto su DevOps), il resto va nella riga importata di quel task in quel giorno;
+// - in meno: toglie dalle righe importate di quel task, dalla più recente; le righe scritte a mano non le tocco mai.
+// Le modifiche precedenti al passaggio a questo sistema (data.ado.cutoff) le aveva già gestite il vecchio import.
+const r2 = n => +n.toFixed(2);
+function applyUpdates(evs) {
+  const applied = new Set(data.ado.applied), cutoff = data.ado.cutoff ? Date.parse(data.ado.cutoff) : 0, added = [];
+  let changed = 0;
+  const rows = () => [...data.entries, ...added];
+  for (const ev of [...evs].sort((a, b) => Date.parse(a.at) - Date.parse(b.at))) {
+    const key = `${ev.task}#${ev.rev}`;
+    if (applied.has(key) || Date.parse(ev.at) <= cutoff) continue;
+    applied.add(key);
+    if (ev.delta > 0) {
+      let left = ev.delta;
+      const from = addDays(ev.day, -7);
+      for (const e of data.entries.filter(e => !e.ado && e.task === ev.task && +e.hours > 0 && e.date >= from && e.date <= ev.day).sort((a, b) => a.date.localeCompare(b.date))) {
+        const t = Math.min(r2(+e.hours - (e.matched ?? 0)), left); if (t <= 0) continue;
+        e.matched = r2((e.matched ?? 0) + t); left = r2(left - t); if (!left) break;
+      }
+      if (left > 0) {
+        const row = rows().find(e => e.ado && e.task === ev.task && e.date === ev.day);
+        if (row) row.hours = r2((+row.hours || 0) + left);
+        else added.push(newEntry(ev.day, {activity: wi(ev.task)?.title ?? `Task ${ev.task}`, task: ev.task, hours: left, ado: true}));
+        changed++;
+      }
+    } else {
+      let left = -ev.delta;
+      for (const e of rows().filter(e => e.ado && e.task === ev.task && +e.hours > 0).sort((a, b) => b.date.localeCompare(a.date))) {
+        const t = Math.min(+e.hours, left); e.hours = r2(+e.hours - t); left = r2(left - t); changed++;
+        if (!left) break;
+      }
+      // il resto toglieva ore riportate a mano: le righe restano, tornano solo "da abbinare"
+      for (const e of data.entries.filter(e => !e.ado && e.task === ev.task && e.matched).sort((a, b) => b.date.localeCompare(a.date))) {
+        if (!left) break;
+        const t = Math.min(e.matched, left); e.matched = r2(e.matched - t); left = r2(left - t);
+      }
+    }
   }
-  data.ado.seen = [...seen];
-  return out;
+  // righe importate scese a zero: via
+  const zero = data.entries.filter(e => e.ado && e.task && !(+e.hours > 0));
+  for (const e of zero) data.entries.splice(data.entries.indexOf(e), 1);
+  data.ado.applied = [...applied];
+  return {added: added.filter(e => +e.hours > 0), changed};
 }
 // Da quando rileggere le ore: l'ultima settimana già vista, per quelle caricate in ritardo. Prima sync: l'ultimo mese
 // se il diario ha già righe (le ha scritte a mano), dall'inizio dell'anno se è un file nuovo e vuoto.
@@ -1568,16 +1604,17 @@ async function adoSync() {
   setStatus('Azure DevOps…', 'busy');
   try {
     const since = syncSince();
-    const fresh = imports(await adoFind(since), since);
-    data.ado.syncedTo = today(); data.ado.syncedAt = new Date().toISOString();
+    const evs = await adoFind(since);
     if (document.activeElement?.closest?.('.row')) commit(document.activeElement);
-    fresh.forEach(e => insert(e));
-    if (fresh.length) {
-      undoStack = []; // gli snapshot precedenti non hanno le righe importate
+    const {added, changed} = applyUpdates(evs);
+    data.ado.syncedTo = today(); data.ado.syncedAt = new Date().toISOString();
+    added.forEach(e => insert(e));
+    if (changed) {
+      undoStack = []; // gli snapshot precedenti non hanno le modifiche arrivate da DevOps
       await adoSprints(); // le finestre dipendono dai task con ore: con un file nuovo arrivano solo adesso
     }
     save(); render();
-    if (fresh.length) toast(`Importate ${fresh.length} righe da Azure DevOps`);
+    if (changed) toast(`Aggiornate da Azure DevOps ${changed} ${changed === 1 ? 'riga' : 'righe'}`);
   } catch (err) { adoError(err); }
 }
 // Ore del diario non ancora su DevOps: per ogni task, quanto il diario supera il Completed Work,
@@ -1629,8 +1666,9 @@ async function pushMany(ids) {
       const ops = [{op:'test', path:'/rev', value:p.w.rev}, {op:'add', path:`/fields/${CW}`, value:+(p.done + p.h).toFixed(2)}];
       if (p.rem != null) ops.push({op:'add', path:`/fields/${RW}`, value:p.left});
       try {
-        cacheItem(await adoFetch(`_apis/wit/workitems/${p.task}`, ops, 'PATCH'));
-        for (const {e, h} of p.rows) data.ado.pushed.push({task:p.task, date:e.date, at:today(), hours:h});
+        const w = await adoFetch(`_apis/wit/workitems/${p.task}`, ops, 'PATCH'); cacheItem(w);
+        data.ado.applied.push(`${p.task}#${w.rev}`); // questa modifica l'ho fatta da qui: alla sync non va reimportata
+        for (const {e, h} of p.rows) { data.ado.pushed.push({task:p.task, date:e.date, at:today(), hours:h}); if (!e.ado) e.matched = r2((e.matched ?? 0) + h); }
         ok++;
       } catch (err) { if (err.auth) throw err; toast(`Task ${p.task}: ${err.message}`); }
     }

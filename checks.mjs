@@ -18,7 +18,7 @@ Object.assign(globalThis, {document: stub(), window: stub(), indexedDB: {open: s
 
 let T;
 (function () {
-  eval(src + `;T = {imports, unlogged, merge, migrated, adoSprints, iterHours, syncSince, today, addDays, reindex, ghStore, b64enc, b64dec,
+  eval(src + `;T = {applyUpdates, unlogged, merge, migrated, adoSprints, iterHours, syncSince, today, addDays, reindex, ghStore, b64enc, b64dec,
     setStore: (s, v, b) => { store = s; ver = v; base = b; }, flush, get data() { return data; }, get H() { return H; },
     linkCfg, savePatRemote, orgName, splitProjects, setPat: p => { pat = p; },
     use: d => { data = migrated(d); reindex(); return data; }, setFetch: f => { adoFetch = f; }};`);
@@ -30,38 +30,72 @@ const item = (completed, iter) => ({title: 't', type: 'Task', parent: null, comp
 let n = 0;
 const check = async (name, fn) => { await fn(); console.log('ok', ++n, name); };
 
-// ---------- import ore da DevOps ----------
-await check('ore caricate su DevOps il giorno dopo: nessun doppione', () => {
+// ---------- modifiche da DevOps ----------
+// una modifica di Completed Work: task, revisione, giorno (alle 10 UTC), ore in più o in meno
+const ev = (task, rev, day, delta) => ({task, rev, at: `${day}T10:00:00.000Z`, day, delta});
+// applica e inserisce le righe nuove, come fa la sync
+const apply = evs => { const r = T.applyUpdates(evs); T.data.entries.push(...r.added); return r; };
+const tasks = () => T.data.entries.filter(e => e.task).map(e => [e.date, e.task, e.hours, !!e.ado]);
+await check('ore nuove su un task: riga importata nel giorno della modifica', () => {
+  T.use(file([]));
+  apply([ev('1', 5, '2026-10-14', 6)]);
+  assert.deepEqual(tasks(), [['2026-10-14', '1', 6, true]]);
+});
+await check('la stessa modifica letta in due sync: applicata una volta', () => {
+  T.use(file([]));
+  apply([ev('1', 5, '2026-10-14', 6)]); apply([ev('1', 5, '2026-10-14', 6)]);
+  assert.deepEqual(tasks(), [['2026-10-14', '1', 6, true]]);
+});
+await check('dopo la sync aumento le ore su DevOps (anche a task chiuso): la riga importata cresce', () => {
+  T.use(file([]));
+  apply([ev('1', 5, '2026-10-14', 6)]);
+  apply([ev('1', 5, '2026-10-14', 6), ev('1', 6, '2026-10-14', 2)]);
+  assert.deepEqual(tasks(), [['2026-10-14', '1', 8, true]]);
+});
+await check('dopo la sync tolgo ore su DevOps, anche giorni dopo: la riga importata scende', () => {
+  T.use(file([]));
+  apply([ev('1', 5, '2026-10-14', 6)]);
+  apply([ev('1', 6, '2026-10-16', -2)]);
+  assert.deepEqual(tasks(), [['2026-10-14', '1', 4, true]]);
+});
+await check('tolgo tutte le ore su DevOps: la riga importata sparisce', () => {
+  T.use(file([]));
+  apply([ev('1', 5, '2026-10-14', 6)]); apply([ev('1', 6, '2026-10-14', -6)]);
+  assert.deepEqual(tasks(), []);
+});
+await check('ore scritte prima nel diario e poi riportate su DevOps (anche il giorno dopo): nessun doppione', () => {
   T.use(file([E('2026-10-14', '1', 6)]));
-  assert.equal(T.imports([{id: '1', date: '2026-10-15', hours: 6}], '2026-10-10').length, 0);
+  apply([ev('1', 5, '2026-10-15', 6)]);
+  assert.deepEqual(tasks(), [['2026-10-14', '1', 6, false]]);
 });
-await check('diario con meno ore di DevOps: importa solo la differenza', () => {
+await check('su DevOps più ore di quelle scritte nel diario: arriva solo la differenza', () => {
   T.use(file([E('2026-10-14', '1', 2)]));
-  assert.deepEqual(T.imports([{id: '1', date: '2026-10-14', hours: 6}], '2026-10-10').map(e => [e.date, e.hours]), [['2026-10-14', 4]]);
+  apply([ev('1', 5, '2026-10-14', 6)]);
+  assert.deepEqual(tasks(), [['2026-10-14', '1', 2, false], ['2026-10-14', '1', 4, true]]);
 });
-await check('riga importata e poi cancellata a mano: non torna', () => {
-  const d = T.use(file([E('2026-10-14', '1', 2)]));
-  T.imports([{id: '1', date: '2026-10-14', hours: 6}], '2026-10-10');
-  d.entries = [];
-  assert.equal(T.imports([{id: '1', date: '2026-10-14', hours: 6}], '2026-10-10').length, 0);
+await check('le righe scritte a mano non vengono mai toccate, anche se tolgo ore su DevOps', () => {
+  T.use(file([E('2026-10-14', '1', 6)]));
+  apply([ev('1', 5, '2026-10-14', 6)]); apply([ev('1', 6, '2026-10-15', -2)]);
+  assert.deepEqual(tasks(), [['2026-10-14', '1', 6, false]]);
 });
-
-await check('stesso task, nuove ore nello stesso giorno su DevOps (anche a task chiuso): arriva la differenza', () => {
+await check('riga importata cancellata a mano: non torna, ma le ore aggiunte dopo sì', () => {
   const d = T.use(file([]));
-  d.entries.push(...T.imports([{id: '1', date: '2026-10-14', hours: 6}], '2026-10-10')); T.reindex();
-  assert.deepEqual(T.imports([{id: '1', date: '2026-10-14', hours: 8}], '2026-10-10').map(e => e.hours), [2]);
-});
-await check('riga cancellata a mano: non torna, ma le ore aggiunte dopo sì', () => {
-  const d = T.use(file([]));
-  T.imports([{id: '1', date: '2026-10-14', hours: 6}], '2026-10-10');
+  apply([ev('1', 5, '2026-10-14', 6)]);
   d.entries = [];
-  assert.equal(T.imports([{id: '1', date: '2026-10-14', hours: 6}], '2026-10-10').length, 0);
-  assert.deepEqual(T.imports([{id: '1', date: '2026-10-14', hours: 8}], '2026-10-10').map(e => e.hours), [2]);
+  apply([ev('1', 5, '2026-10-14', 6)]);
+  assert.deepEqual(tasks(), []);
+  apply([ev('1', 6, '2026-10-14', 2)]);
+  assert.deepEqual(tasks(), [['2026-10-14', '1', 2, true]]);
 });
-await check('file vecchio (chiavi già viste senza ore): solo gli aumenti successivi', () => {
-  const d = T.use(file([], {ado: {items: {}, seen: ['1@2026-10-14'], syncedTo: null}}));
-  assert.equal(T.imports([{id: '1', date: '2026-10-14', hours: 6}], '2026-10-10').length, 0);
-  assert.deepEqual(T.imports([{id: '1', date: '2026-10-14', hours: 7}], '2026-10-10').map(e => e.hours), [1]);
+await check('file del vecchio import: le modifiche fino all\'ultima sync non si riapplicano', () => {
+  T.use(file([E('2026-10-14', '1', 6, {ado: true})], {ado: {items: {}, seen: [], syncedTo: '2026-10-14', syncedAt: '2026-10-14T12:00:00.000Z'}}));
+  apply([ev('1', 5, '2026-10-14', 6), {...ev('1', 6, '2026-10-14', 3), at: '2026-10-14T15:00:00.000Z'}]);
+  assert.deepEqual(tasks(), [['2026-10-14', '1', 9, true]]);
+});
+await check('file del vecchio import: righe a mano già su DevOps non assorbono le modifiche nuove', () => {
+  const d = T.use(file([E('2026-10-14', '1', 6)], {ado: {items: {'1': item(6, 'P\\S')}, seen: [], syncedTo: '2026-10-14', syncedAt: '2026-10-14T12:00:00.000Z'}}));
+  apply([{...ev('1', 7, '2026-10-15', 2), at: '2026-10-15T09:00:00.000Z'}]);
+  assert.deepEqual(tasks(), [['2026-10-14', '1', 6, false], ['2026-10-15', '1', 2, true]]);
 });
 
 // ---------- ore non ancora su DevOps ----------
