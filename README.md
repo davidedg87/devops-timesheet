@@ -75,6 +75,7 @@ Se hai saltato questo passo, lo riprendi dal riquadro **Azure DevOps** in basso 
 ## Uso quotidiano
 
 - **Le ore dei task arrivano da sole** a ogni apertura. Puoi anche premere **Sincronizza** nel riquadro Azure DevOps.
+- **Correzioni su Azure DevOps**: se dopo una sync cambi a mano il *Completed Work* di un task, anche chiuso, la sync successiva aggiorna il diario. Le ore in più arrivano nel giorno in cui le hai aggiunte; quelle in meno vengono tolte dalla riga importata più recente di quel task. Le righe scritte a mano nel diario non vengono mai modificate.
 - **Aggiungere un'attività**: usa la riga in alto nel Diario (giorno, cosa hai fatto, task, ore). Commessa e nota stanno sotto **Altro**. Sul telefono c'è il pulsante **＋**.
 - **Assenze**: in ogni giorno c'è il menu **＋ Assenza**, visibile passando col mouse sulla giornata. Se non scrivi le ore, l'assenza vale una giornata intera.
 - **Caricare le ore su Azure DevOps**: se ci sono ore scritte nel diario e non ancora sui task, in alto compare *"N h non ancora su DevOps · Carica"*. Prima di scrivere ti mostra il riepilogo; se qualcuno ha modificato il task nel frattempo, non sovrascrive.
@@ -112,7 +113,7 @@ Se hai saltato questo passo, lo riprendi dal riquadro **Azure DevOps** in basso 
 | Non compare l'elenco delle organizzazioni | Il token Azure DevOps deve valere per *All accessible organizations* e avere *User Profile: Read*. In alternativa scrivi l'organizzazione a mano: è la parola dopo `dev.azure.com/` nel tuo indirizzo. |
 | "PAT non valido o scaduto" | Il token Azure DevOps è scaduto o è stato revocato: creane uno nuovo e inseriscilo da **Impostazioni → Azure DevOps**. |
 | "Token GitHub non valido o scaduto" | Crea un nuovo token GitHub per il repo dei dati e ricollega l'archivio da **Impostazioni → Cambia archivio**. |
-| Mancano delle ore di un task | L'app importa solo gli incrementi del *Completed Work* fatti **da te**, nei progetti scelti. Controlla che il progetto sia spuntato e premi **Sincronizza**: rilegge sempre l'ultima settimana, per le ore caricate in ritardo. |
+| Mancano delle ore di un task | L'app legge le modifiche al *Completed Work* fatte **da te**, nei progetti scelti. Controlla che il progetto sia spuntato e premi **Sincronizza**. |
 | Non vedo la versione nuova dell'app | Ricarica la pagina con `Ctrl` + `F5`. Sul telefono chiudi e riapri l'app. |
 | "I dati erano cambiati: ricaricati" | Hai salvato da un altro dispositivo: l'app ha ricaricato la versione più recente, unendo le modifiche. |
 
