@@ -2,7 +2,7 @@
 
 Diario ore personale che si compila da **Azure DevOps**. Scegli organizzazione e progetti, e l'app ricostruisce giorno per giorno le ore dei tuoi task dal *Completed Work*. Ferie, malattie, permessi e congedi li aggiungi a mano.
 
-**Apri l'app:** https://davidedg87.github.io/devopsTimesheet/
+**Apri l'app:** https://davidedg87.github.io/devops-timesheet/
 
 ## Cosa fa
 - **Import da Azure DevOps**: le ore che hai registrato sui task (assegnati a te o modificati da te), in uno o più progetti della stessa organizzazione.
