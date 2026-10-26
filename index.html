@@ -658,6 +658,16 @@ const fileStore = h => ({
 // ponytail: l'API contents restituisce il contenuto fino a 1 MB (oggi il file è ~150 KB); oltre serve la lettura "raw"
 const b64enc = s => { const b = new TextEncoder().encode(s); let r = ''; for (let i = 0; i < b.length; i += 0x8000) r += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(r); };
 const b64dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0)));
+// Repo dei dati rinominato su GitHub: l'API risponde col nome nuovo (il token vale ancora, è legato al repo e non al nome).
+// Aggiorno la configurazione salvata, così le scritture vanno all'indirizzo giusto e non dipendono dal reindirizzamento.
+async function followRename(cfg) {
+  try {
+    const r = await fetch(`https://api.github.com/repos/${cfg.repo}`, {cache: 'no-store', headers: {Authorization: `Bearer ${cfg.token}`}});
+    const name = r.ok && (await r.json()).full_name;
+    if (name && name.toLowerCase() !== cfg.repo.toLowerCase()) { cfg = {...cfg, repo: name}; await kv('readwrite', s => s.put(cfg, 'gh')); }
+  } catch {}
+  return cfg;
+}
 function ghStore({repo, path, token}) {
   const url = `https://api.github.com/repos/${repo}/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
   const req = async (method, body) => {
@@ -766,7 +776,7 @@ const fromLink = linkCfg(location.hash);
 if (location.hash.startsWith('#gh=')) history.replaceState(null, '', location.pathname + location.search);
 (fromLink?.repo && fromLink.token ? kv('readwrite', s => s.put(fromLink, 'gh')) : Promise.resolve())
   .then(() => Promise.all([kv('readonly', s => s.get('gh')), kv('readonly', s => s.get('file'))])).then(async ([gh, h]) => {
-  if (gh) return openStore(ghStore(gh)).catch(err => { $('ghMsg').textContent = ''; wzStep(1); toast('GitHub: ' + err.message); });
+  if (gh) { gh = await followRename(gh); return openStore(ghStore(gh)).catch(err => { $('ghMsg').textContent = ''; wzStep(1); toast('GitHub: ' + err.message); }); }
   if (!h) return;
   if (await h.queryPermission({mode:'readwrite'}) === 'granted') return load(h);
   wzStep(1); $('reopen').hidden = false; $('reopen').onclick = () => load(h); $('reopen').focus();
