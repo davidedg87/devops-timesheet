@@ -1523,7 +1523,7 @@ async function adoFind(since) {
   const who = (await adoFetch('_apis/connectionData')).authenticatedUser, me = who.properties.Account.$value.toLowerCase();
   data.ado.me = who.providerDisplayName; // nome per la testata, se non l'ho impostato a mano
   const prj = adoProjects().map(p => `'${p.replace(/'/g, "''")}'`).join(', ');
-  const q = await adoFetch(`_apis/wit/wiql`, {query: `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] IN (${prj}) AND [System.WorkItemType] = 'Task' AND [System.ChangedDate] >= '${since}' AND ([System.AssignedTo] = @Me OR [System.ChangedBy] = @Me)`});
+  const q = await adoFetch(`_apis/wit/wiql`, {query: `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] IN (${prj}) AND [System.ChangedDate] >= '${since}' AND ([System.AssignedTo] = @Me OR [System.ChangedBy] = @Me)`});
   const ids = q.workItems.map(w => String(w.id));
   // tutte le revisioni di ogni task, a pagine da 200 (l'API le dà dalla più vecchia: senza paginare le ultime si perdono)
   // a gruppi di 20 task: dall'inizio dell'anno possono essere centinaia, tutti insieme Azure DevOps rallenta o rifiuta
@@ -1624,7 +1624,7 @@ function unlogged() {
   const out = new Map(), byTask = new Map();
   for (const e of data.entries) if (isWi(e.task) && +e.hours > 0) (byTask.get(e.task) ?? byTask.set(e.task, []).get(e.task)).push(e);
   for (const [t, es] of byTask) {
-    const w = wi(t); if (w?.type !== 'Task' || w.completed === undefined) continue;
+    const w = wi(t); if (!['Task', 'Bug'].includes(w?.type) || w.completed === undefined) continue;
     let gap = es.reduce((s, e) => s + +e.hours, 0) - (w.completed ?? 0);
     for (const e of es.sort((a, b) => b.date.localeCompare(a.date))) {
       if (gap < 0.01) break;
